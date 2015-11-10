@@ -128,6 +128,7 @@ func (daemon *Daemon) containerStart(container *Container) (err error) {
 		return err
 	}
 	mounts = append(mounts, container.ipcMounts()...)
+	mounts = append(mounts, container.tmpfsMounts()...)
 
 	container.command.Mounts = mounts
 	if err := daemon.waitForStart(container); err != nil {

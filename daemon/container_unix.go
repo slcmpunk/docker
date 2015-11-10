@@ -1528,3 +1528,15 @@ func (container *Container) unmountVolumes(forceSyscall bool) error {
 
 	return nil
 }
+
+func (container *Container) tmpfsMounts() []execdriver.Mount {
+	var mounts []execdriver.Mount
+	for dest, data := range container.hostConfig.Tmpfs {
+		mounts = append(mounts, execdriver.Mount{
+			Source:      "tmpfs",
+			Destination: dest,
+			Data:        data,
+		})
+	}
+	return mounts
+}

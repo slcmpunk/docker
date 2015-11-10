@@ -59,6 +59,7 @@ docker-run - Run a command in a new container
 [**--shm-size**[=*[]*]]
 [**--sig-proxy**[=*true*]]
 [**-t**|**--tty**[=*false*]]
+[**--tmpfs**[=*[]*]]
 [**-u**|**--user**[=*USER*]]
 [**-v**|**--volume**[=*[]*]]
 [**--ulimit**[=*[]*]]
@@ -432,6 +433,10 @@ interactive shell. The default is false.
 The **-t** option is incompatible with a redirection of the docker client
 standard input.
 
+**--tmpfs**=[] Create a tmpfs mount
+
+   Mount a tmpfs mount (e.g., `--tmpfs /tmp:rw,size=787448k,mode=1777` will mount a tmpfs at /tmp within the container, this command will copy the underlying content into the /tmpfs) Default mount flags `rw,noexec,nosuid,nodev,size=65536k`.
+
 **-u**, **--user**=""
    Sets the username or UID used and optionally the groupname or GID for the specified command.
 
@@ -547,6 +552,15 @@ the exit codes follow the `chroot` standard, see below:
     # 3
 
 # EXAMPLES
+
+## Running container in Read-Only mode
+
+If you want to secure a container in such a way that the container content can
+not be modified you can use the --read-only switch.  You probably will need to
+mount tmpfs directories in /run and maybe /tmp so the applications have space
+to write temporary data.
+
+    # docker run -v --read-only -v tmpfs:/run -v tmpfs:/tmp -i -t fedora /bin/bash
 
 ## Exposing log messages from the container to the host's log
 

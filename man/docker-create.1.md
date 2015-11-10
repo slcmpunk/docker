@@ -56,6 +56,7 @@ docker-create - Create a new container
 [**--stop-signal**[=*SIGNAL*]]
 [**--shm-size**[=*[]*]]
 [**-t**|**--tty**[=*false*]]
+[**--tmpfs**[=*[]*]]
 [**-u**|**--user**[=*USER*]]
 [**--ulimit**[=*[]*]]
 [**--uts**[=*[]*]]
@@ -266,6 +267,10 @@ This value should always larger than **-m**, so you should always use this with 
 
 **-t**, **--tty**=*true*|*false*
    Allocate a pseudo-TTY. The default is *false*.
+
+**--tmpfs**=[] Create a tmpfs mount
+
+   Mount a tmpfs mount (e.g., `--tmpfs /tmp:rw,size=787448k,mode=1777` will mount a tmpfs at /tmp within the container, this command will copy the underlying content into the /tmpfs) Default mount flags `rw,noexec,nosuid,nodev,size=65536k`.
 
 **-u**, **--user**=""
    Username or UID

@@ -232,7 +232,7 @@ func (s *DockerSuite) TestContainerApiStartDupVolumeBinds(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(status, check.Equals, http.StatusInternalServerError)
 
-	if !strings.Contains(string(body), "Duplicate bind") {
+	if !strings.Contains(string(body), "Duplicate mount point") {
 		c.Fatalf("Expected failure due to duplicate bind mounts to same path, instead got: %q with error: %v", string(body), err)
 	}
 }
