@@ -72,14 +72,13 @@ func runPull(dockerCli *client.DockerCli, opts pullOptions) error {
 
 	ctx := context.Background()
 
-	authConfig := dockerCli.ResolveAuthConfig(ctx, repoInfo.Index)
-	requestPrivilege := dockerCli.RegistryAuthenticationPrivilegedFunc(repoInfo.Index, "pull")
+	requestPrivilege := dockerCli.RegistryAuthenticationPrivilegedFunc(repoInfo.Index, "pull", reference.IsReferenceFullyQualified(distributionRef))
 
 	if client.IsTrusted() && !registryRef.HasDigest() {
 		// Check if tag is digest
-		err = dockerCli.TrustedPull(ctx, repoInfo, registryRef, authConfig, requestPrivilege)
+		err = dockerCli.TrustedPull(ctx, distributionRef, repoInfo, registryRef, requestPrivilege)
 	} else {
-		err = dockerCli.ImagePullPrivileged(ctx, authConfig, distributionRef.String(), requestPrivilege, opts.all)
+		err = dockerCli.ImagePullPrivileged(ctx, distributionRef, requestPrivilege, opts.all)
 	}
 	if err != nil {
 		return err
