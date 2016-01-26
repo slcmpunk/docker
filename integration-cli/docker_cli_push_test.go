@@ -559,7 +559,6 @@ func (s *DockerRegistriesSuite) TestPushNeedsAuth(c *check.C) {
 	c.Assert(s.d.StartWithBusybox("--add-registry="+s.regWithAuth.url), check.IsNil)
 
 	repo := fmt.Sprintf("%s/runcom/busybox", s.regWithAuth.url)
-	repoV2Url := fmt.Sprintf("http://%s/v2/runcom/busybox", s.regWithAuth.url)
 	repoUnqualified := "runcom/busybox"
 
 	out, err := s.d.Cmd("tag", "busybox", repoUnqualified)
@@ -568,9 +567,8 @@ func (s *DockerRegistriesSuite) TestPushNeedsAuth(c *check.C) {
 	// try to pull with unqualified image and get auth denied
 	out, err = s.d.Cmd("push", repoUnqualified)
 	c.Assert(err, check.NotNil, check.Commentf(out))
-	expected := fmt.Sprintf("Post %s/blobs/uploads/: no basic auth credentials", repoV2Url)
-	if !strings.Contains(out, expected) {
-		c.Fatalf("Wanted %s, got %s", expected, out)
+	if !strings.Contains(out, "no basic auth credentials") {
+		c.Fatalf("Wanted no basic auth credentials, got %s", out)
 	}
 
 	// login with the registry...
@@ -588,7 +586,7 @@ func (s *DockerRegistriesSuite) TestPushNeedsAuth(c *check.C) {
 	// pull the image from the private registry so that we're sure it was pushed there
 	out, err = s.d.Cmd("pull", repo)
 	c.Assert(err, check.IsNil, check.Commentf(out))
-	expected = fmt.Sprintf("Trying to pull repository %s ... latest: Pulling from %s", repo, repoUnqualified)
+	expected := fmt.Sprintf("Trying to pull repository %s ... latest: Pulling from %s", repo, repoUnqualified)
 	if !strings.Contains(out, expected) {
 		c.Fatalf("Wanted %s, got %s", expected, out)
 	}
