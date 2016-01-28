@@ -1792,6 +1792,7 @@ func (devices *DeviceSet) deleteTransaction(info *devInfo, syncDelete bool) erro
 		if info.Deleted {
 			devices.nrDeletedDevices--
 		}
+		devices.markDeviceIDFree(info.DeviceID)
 	} else {
 		if err := devices.markForDeferredDeletion(info); err != nil {
 			return err
@@ -1845,8 +1846,6 @@ func (devices *DeviceSet) deleteDevice(info *devInfo, syncDelete bool) error {
 	if err := devices.deleteTransaction(info, syncDelete); err != nil {
 		return err
 	}
-
-	devices.markDeviceIDFree(info.DeviceID)
 
 	return nil
 }
