@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -4266,5 +4267,44 @@ func (s *DockerRegistrySuite) TestRunWithAdditionalRegistry(c *check.C) {
 	// therefore we need to compare size
 	if bbImg.size != hwImg.size {
 		c.Fatalf("expected %s:%s and %s:%s to have equal size (%s != %s)", hwImg.name, hwImg.tag, bbImg.name, bbImg.tag, hwImg.size, bbImg.size)
+	}
+}
+
+func (s *DockerSuite) TestRunAttachFailedNoLeak(c *check.C) {
+	type info struct {
+		NGoroutines int
+	}
+	getNGoroutines := func() int {
+		var i info
+		status, b, err := sockRequest("GET", "/info", nil)
+		c.Assert(err, checker.IsNil)
+		c.Assert(status, checker.Equals, 200)
+		c.Assert(json.Unmarshal(b, &i), checker.IsNil)
+		return i.NGoroutines
+	}
+	nroutines := getNGoroutines()
+
+	runSleepingContainer(c, "--name=test", "-p", "8000:8000")
+
+	out, _, err := dockerCmdWithError("run", "-p", "8000:8000", "busybox", "true")
+	c.Assert(err, checker.NotNil)
+	// check for windows error as well
+	c.Assert(strings.Contains(string(out), "port is already allocated") || strings.Contains(string(out), "were not connected because a duplicate name exists"), checker.Equals, true, check.Commentf("Output: %s", out))
+	dockerCmd(c, "rm", "-f", "test")
+
+	// NGoroutines is not updated right away, so we need to wait before failing
+	t := time.After(30 * time.Second)
+	for {
+		select {
+		case <-t:
+			n := getNGoroutines()
+			c.Assert(n <= nroutines, checker.Equals, true, check.Commentf("leaked goroutines: expected less than or equal to %d, got: %d", nroutines, n))
+
+		default:
+			if n := getNGoroutines(); n <= nroutines {
+				return
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
 	}
 }
