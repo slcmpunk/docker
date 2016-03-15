@@ -159,6 +159,7 @@ func (m *Manager) Apply(pid int) error {
 		systemdDbus.PropSlice(slice),
 		systemdDbus.PropDescription("docker container "+c.Name),
 		newProp("PIDs", []uint32{uint32(pid)}),
+		newProp("Delegate", true),
 	)
 
 	// Always enable accounting, this gets us the same behaviour as the fs implementation,
