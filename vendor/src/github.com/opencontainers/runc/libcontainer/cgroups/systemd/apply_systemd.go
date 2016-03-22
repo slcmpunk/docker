@@ -151,8 +151,8 @@ func (m *Manager) Apply(pid int) error {
 		properties []systemdDbus.Property
 	)
 
-	if c.Slice != "" {
-		slice = c.Slice
+	if c.Parent != "" {
+		slice = c.Parent
 	}
 
 	properties = append(properties,
@@ -284,8 +284,8 @@ func getSubsystemPath(c *configs.Cgroup, subsystem string) (string, error) {
 	}
 
 	slice := "system.slice"
-	if c.Slice != "" {
-		slice = c.Slice
+	if c.Parent != "" {
+		slice = c.Parent
 	}
 
 	return filepath.Join(mountpoint, initPath, slice, getUnitName(c)), nil
@@ -350,7 +350,7 @@ func (m *Manager) Set(container *configs.Config) error {
 }
 
 func getUnitName(c *configs.Cgroup) string {
-	return fmt.Sprintf("%s-%s.scope", c.Parent, c.Name)
+	return fmt.Sprintf("%s-%s.scope", c.ScopePrefix, c.Name)
 }
 
 func setKernelMemory(c *configs.Cgroup) error {
