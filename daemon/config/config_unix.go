@@ -31,6 +31,7 @@ type Config struct {
 	SeccompProfile       string                   `json:"seccomp-profile,omitempty"`
 	ShmSize              opts.MemBytes            `json:"default-shm-size,omitempty"`
 	NoNewPrivileges      bool                     `json:"no-new-privileges,omitempty"`
+	EnableSecrets        bool                     `json:"enable-secrets"`
 }
 
 // BridgeConfig stores all the bridge driver specific
