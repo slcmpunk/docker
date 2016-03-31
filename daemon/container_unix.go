@@ -1603,23 +1603,36 @@ func detachMounted(path string) error {
 
 func (container *Container) checkNoVolumes() error {
 	if container.daemon.configStore.NoVolumes {
+		bindDests := []string{}
+		// when --no-volumes is set do not allow container run with -v unless it's a bind
+		for _, m := range container.MountPoints {
+			if m.Driver != "" {
+				logrus.Debugf("container has a mount which is not a bind mount: %v", m)
+				return derr.ErrorCodeCantStart.WithArgs(container.ID, "volumes are not allowed")
+			}
+			bindDests = append(bindDests, m.Destination)
+		}
 		// when --no-volumes is set do not allow volumes from images
 		if container.ImageID != "" { // not FROM scratch
 			img, err := container.daemon.GetImage(container.ImageID)
 			if err != nil {
 				return err
 			}
-			if len(img.Config.Volumes) > 0 {
+			if len(bindDests) == 0 && len(img.Config.Volumes) > 0 {
+				logrus.Debugf("container bind == 0 && image voluems > 0: %v", img.Config.Volumes)
 				return derr.ErrorCodeCantStart.WithArgs(container.ID, "volumes are not allowed")
 			}
-		}
-		// when --no-volumes is set do not allow container run with -v unless it's a bind
-		for _, m := range container.MountPoints {
-			if m.Driver != "" {
-				return derr.ErrorCodeCantStart.WithArgs(container.ID, "volumes are not allowed")
+			if len(img.Config.Volumes) > 0 {
+				for _, bd := range bindDests {
+					if _, ok := img.Config.Volumes[bd]; !ok {
+						logrus.Debugf("bind mounts do not override image volume: %s, %v", bd, img.Config.Volumes)
+						return derr.ErrorCodeCantStart.WithArgs(container.ID, "volumes are not allowed")
+					}
+				}
 			}
 		}
 		if len(container.hostConfig.VolumesFrom) > 0 {
+			logrus.Debugf("container has volumesFrom flag(s): %v", container.hostConfig.VolumesFrom)
 			return derr.ErrorCodeCantStart.WithArgs(container.ID, "volumes are not allowed")
 		}
 	}
