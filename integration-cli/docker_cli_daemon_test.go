@@ -1948,3 +1948,24 @@ func (s *DockerDaemonSuite) TestDaemonStartWithNoVolumesNoVolumesFrom(c *check.C
 	c.Assert(err, check.NotNil)
 	c.Assert(out, checker.Contains, "volumes are not allowed")
 }
+
+func (s *DockerDaemonSuite) TestDaemonStartWithNoVolumesAllowOverrideWithBinds(c *check.C) {
+	c.Assert(s.d.StartWithBusybox("--no-volumes"), checker.IsNil)
+
+	dockerfile, cleanup, err := makefile("FROM busybox\nVOLUME /test")
+	c.Assert(err, check.IsNil, check.Commentf("Unable to create test dockerfile"))
+	defer cleanup()
+	imgName := "volume"
+	_, err = s.d.Cmd("build", "-t", imgName, "--file", dockerfile, ".")
+	c.Assert(err, checker.IsNil)
+
+	// run with override with bindmount -> allow
+	out, err := s.d.Cmd("run", "-v", "/source:/test", imgName)
+	c.Assert(err, checker.IsNil, check.Commentf(out))
+	c.Assert(out, checker.Not(checker.Contains), "volumes are not allowed")
+
+	// run with a bind which doesn't override -> disallow
+	out, err = s.d.Cmd("run", "-v", "/source:/testNo", imgName)
+	c.Assert(err, checker.NotNil, check.Commentf(out))
+	c.Assert(out, checker.Contains, "volumes are not allowed")
+}
