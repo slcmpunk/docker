@@ -1501,8 +1501,8 @@ func (container *Container) setupIpcDirs() error {
 		}
 
 		shmSize := DefaultSHMSize
-		if container.hostConfig.ShmSize != nil {
-			shmSize = *container.hostConfig.ShmSize
+		if container.hostConfig.ShmSize != 0 {
+			shmSize = container.hostConfig.ShmSize
 		}
 
 		shmproperty := "mode=1777,size=" + strconv.FormatInt(shmSize, 10)

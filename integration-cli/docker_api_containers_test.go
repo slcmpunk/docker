@@ -1568,19 +1568,8 @@ func (s *DockerSuite) TestPostContainersCreateShmSizeNegative(c *check.C) {
 	c.Assert(string(body), checker.Contains, "SHM size must be greater then 0")
 }
 
-func (s *DockerSuite) TestPostContainersCreateShmSizeZero(c *check.C) {
-	config := map[string]interface{}{
-		"Image":      "busybox",
-		"HostConfig": map[string]interface{}{"ShmSize": 0},
-	}
-
-	status, body, err := sockRequest("POST", "/containers/create", config)
-	c.Assert(err, check.IsNil)
-	c.Assert(status, check.Equals, http.StatusInternalServerError)
-	c.Assert(string(body), checker.Contains, "SHM size must be greater then 0")
-}
-
 func (s *DockerSuite) TestPostContainersCreateShmSizeHostConfigOmitted(c *check.C) {
+	var defaultSHMSize int64 = 67108864
 	config := map[string]interface{}{
 		"Image": "busybox",
 		"Cmd":   "mount",
@@ -1600,7 +1589,7 @@ func (s *DockerSuite) TestPostContainersCreateShmSizeHostConfigOmitted(c *check.
 	var containerJSON types.ContainerJSON
 	c.Assert(json.Unmarshal(body, &containerJSON), check.IsNil)
 
-	c.Assert(containerJSON.HostConfig.ShmSize, check.IsNil)
+	c.Assert(containerJSON.HostConfig.ShmSize, check.Equals, defaultSHMSize)
 
 	out, _ := dockerCmd(c, "start", "-i", containerJSON.ID)
 	shmRegexp := regexp.MustCompile(`shm on /dev/shm type tmpfs(.*)size=65536k`)
@@ -1630,7 +1619,7 @@ func (s *DockerSuite) TestPostContainersCreateShmSizeOmitted(c *check.C) {
 	var containerJSON types.ContainerJSON
 	c.Assert(json.Unmarshal(body, &containerJSON), check.IsNil)
 
-	c.Assert(*containerJSON.HostConfig.ShmSize, check.Equals, int64(67108864))
+	c.Assert(containerJSON.HostConfig.ShmSize, check.Equals, int64(67108864))
 
 	out, _ := dockerCmd(c, "start", "-i", containerJSON.ID)
 	shmRegexp := regexp.MustCompile(`shm on /dev/shm type tmpfs(.*)size=65536k`)
@@ -1660,7 +1649,7 @@ func (s *DockerSuite) TestPostContainersCreateWithShmSize(c *check.C) {
 	var containerJSON types.ContainerJSON
 	c.Assert(json.Unmarshal(body, &containerJSON), check.IsNil)
 
-	c.Assert(*containerJSON.HostConfig.ShmSize, check.Equals, int64(1073741824))
+	c.Assert(containerJSON.HostConfig.ShmSize, check.Equals, int64(1073741824))
 
 	out, _ := dockerCmd(c, "start", "-i", containerJSON.ID)
 	shmRegex := regexp.MustCompile(`shm on /dev/shm type tmpfs(.*)size=1048576k`)

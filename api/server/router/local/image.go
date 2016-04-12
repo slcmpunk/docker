@@ -408,7 +408,7 @@ func (s *router) postBuild(ctx context.Context, w http.ResponseWriter, r *http.R
 		if err != nil {
 			return errf(err)
 		}
-		buildConfig.ShmSize = &shmSize
+		buildConfig.ShmSize = shmSize
 	}
 
 	var buildUlimits = []*ulimit.Ulimit{}

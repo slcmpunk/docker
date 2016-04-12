@@ -703,9 +703,11 @@ func deleteAllContainers() error {
 		return err
 	}
 
-	if err = deleteContainer(containers); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to delete containers %s: %v\n", containers, err)
-		return err
+	if containers != "" {
+		if err = deleteContainer(containers); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to delete containers %s: %v\n", containers, err)
+			return err
+		}
 	}
 	return nil
 }
