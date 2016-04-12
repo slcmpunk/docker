@@ -72,6 +72,7 @@ func (daemon *Daemon) Create(config *runconfig.Config, hostConfig *runconfig.Hos
 
 	if hostConfig == nil {
 		hostConfig = &runconfig.HostConfig{}
+		hostConfig.ShmSize = DefaultSHMSize
 	}
 	if hostConfig.SecurityOpt == nil {
 		hostConfig.SecurityOpt, err = daemon.generateSecurityOpt(hostConfig.IpcMode, hostConfig.PidMode)

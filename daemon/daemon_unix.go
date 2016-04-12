@@ -114,9 +114,8 @@ func (daemon *Daemon) adaptContainerSettings(hostConfig *runconfig.HostConfig, a
 		// By default, MemorySwap is set to twice the size of Memory.
 		hostConfig.MemorySwap = hostConfig.Memory * 2
 	}
-	if hostConfig.ShmSize == nil {
-		shmSize := DefaultSHMSize
-		hostConfig.ShmSize = &shmSize
+	if hostConfig.ShmSize == 0 {
+		hostConfig.ShmSize = DefaultSHMSize
 	}
 }
 
@@ -135,7 +134,7 @@ func verifyPlatformContainerSettings(daemon *Daemon, hostConfig *runconfig.HostC
 		return warnings, fmt.Errorf("Cannot use --lxc-conf with execdriver: %s", daemon.ExecutionDriver().Name())
 	}
 
-	if hostConfig.ShmSize != nil && *hostConfig.ShmSize <= 0 {
+	if hostConfig.ShmSize < 0 {
 		return warnings, fmt.Errorf("SHM size must be greater then 0")
 	}
 

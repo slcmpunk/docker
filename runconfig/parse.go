@@ -201,13 +201,13 @@ func Parse(cmd *flag.FlagSet, args []string) (*Config, *HostConfig, *flag.FlagSe
 		return nil, nil, cmd, fmt.Errorf("Invalid value: %d. Valid memory swappiness range is 0-100", swappiness)
 	}
 
-	var parsedShm *int64
+	var parsedShm int64
 	if *flShmSize != "" {
 		shmSize, err := units.RAMInBytes(*flShmSize)
 		if err != nil {
 			return nil, nil, cmd, err
 		}
-		parsedShm = &shmSize
+		parsedShm = shmSize
 	}
 
 	var binds []string
