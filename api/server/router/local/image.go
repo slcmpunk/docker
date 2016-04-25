@@ -177,7 +177,6 @@ func (s *router) postImagesPush(ctx context.Context, w http.ResponseWriter, r *h
 
 	output := ioutils.NewWriteFlusher(w)
 	defer output.Close()
-
 	imagePushConfig := &graph.ImagePushConfig{
 		MetaHeaders: metaHeaders,
 		AuthConfigs: authConfigs,
@@ -588,11 +587,6 @@ func (s *router) getAuthConfigs(name string, r *http.Request, backward bool, sea
 			// for a pull it is not an error if no auth was given
 			// to increase compatibility with the existing api it is defaulting to be empty
 			authConfigs = make(map[string]cliconfig.AuthConfig)
-		}
-	} else if backward {
-		// the old format is supported for compatibility if there was no authConfig header
-		if err := json.NewDecoder(r.Body).Decode(&authConfigs); err != nil {
-			return nil, fmt.Errorf("Bad parameters and missing X-Registry-Auth: %v", err)
 		}
 	}
 	// maybe client just sends one auth config
