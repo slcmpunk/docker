@@ -16,6 +16,9 @@ import (
 
 // createContainerPlatformSpecificSettings performs platform specific container create functionality
 func createContainerPlatformSpecificSettings(container *Container, config *runconfig.Config, hostConfig *runconfig.HostConfig, img *image.Image) error {
+	if container.daemon.configStore.NoVolumes {
+		return nil
+	}
 	for spec := range config.Volumes {
 		name := stringid.GenerateNonCryptoID()
 		destination := filepath.Clean(spec)
