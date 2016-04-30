@@ -494,7 +494,8 @@ func (s *DockerSuite) TestRunSysctls(c *check.C) {
 	out, _ := dockerCmd(c, "run", "--sysctl", "net.ipv4.ip_forward=1", "--name", "test", "busybox", "cat", "/proc/sys/net/ipv4/ip_forward")
 	c.Assert(strings.TrimSpace(out), check.Equals, "1")
 
-	out = inspectFieldJSON(c, "test", "HostConfig.Sysctls")
+	out, err = inspectFieldJSON("test", "HostConfig.Sysctls")
+	c.Assert(err, check.IsNil)
 
 	sysctls := make(map[string]string)
 	err = json.Unmarshal([]byte(out), &sysctls)
@@ -504,7 +505,8 @@ func (s *DockerSuite) TestRunSysctls(c *check.C) {
 	out, _ = dockerCmd(c, "run", "--sysctl", "net.ipv4.ip_forward=0", "--name", "test1", "busybox", "cat", "/proc/sys/net/ipv4/ip_forward")
 	c.Assert(strings.TrimSpace(out), check.Equals, "0")
 
-	out = inspectFieldJSON(c, "test1", "HostConfig.Sysctls")
+	out, err = inspectFieldJSON("test1", "HostConfig.Sysctls")
+	c.Assert(err, check.IsNil)
 
 	err = json.Unmarshal([]byte(out), &sysctls)
 	c.Assert(err, check.IsNil)
