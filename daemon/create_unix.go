@@ -16,9 +16,6 @@ import (
 
 // createContainerPlatformSpecificSettings performs platform specific container create functionality
 func createContainerPlatformSpecificSettings(container *Container, config *runconfig.Config, hostConfig *runconfig.HostConfig, img *image.Image) error {
-	if container.daemon.configStore.NoVolumes {
-		return nil
-	}
 	for spec := range config.Volumes {
 		name := stringid.GenerateNonCryptoID()
 		destination := filepath.Clean(spec)
@@ -65,6 +62,13 @@ func createContainerPlatformSpecificSettings(container *Container, config *runco
 		}
 
 		container.addMountPointWithVolume(destination, v, true)
+
+		if container.daemon.configStore.NoVolumes {
+			container.daemon.volumes.Decrement(v)
+			if err := container.daemon.volumes.Remove(v); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
