@@ -236,7 +236,6 @@ func (s *Server) LogAction(w http.ResponseWriter, r *http.Request) error {
 	switch action {
 	case "history", "info", "images", "version", "json", "search", "stats", "events":
 		logrus.Debug(message)
-		fallthrough
 	default:
 		logrus.Info(message)
 		logAuditlog(c, action, username, loginuid, true)
