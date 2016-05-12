@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"net/url"
 	"os/user"
@@ -216,7 +215,7 @@ func (s *Server) LogAction(w http.ResponseWriter, r *http.Request) error {
 			break
 		}
 		message = fmt.Sprintf("LoginUID=%v, %s", loginuid, message)
-		if loginuid < 0 || loginuid > math.MaxUint32 {
+		if loginuid < 0 || loginuid >= 0xffffffff {
 			break
 		}
 		//Get username
