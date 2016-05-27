@@ -8,7 +8,7 @@ import (
 
 // DefaultPropagationMode defines what propagation mode should be used by
 // default if user has not specified one explicitly.
-const DefaultPropagationMode string = "rprivate"
+const DefaultPropagationMode string = "rslave"
 
 // propagation modes
 var propagationModes = map[string]bool{
