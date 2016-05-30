@@ -28,37 +28,30 @@ func getFdFromWriter(w http.ResponseWriter) int {
 	//This is because the connection object is not exported by the writer.
 	writerVal := reflect.Indirect(reflect.ValueOf(w))
 	if writerVal.Kind() != reflect.Struct {
-		logrus.Warn("ResponseWriter is not a struct")
+		logrus.Warn("ResponseWriter is not a struct but %s", writerVal.Kind())
 		return -1
 	}
+
 	//Get the underlying http connection
-	httpconn := writerVal.FieldByName("conn")
-	if !httpconn.IsValid() {
-		logrus.Warn("ResponseWriter does not contain a field named conn")
-		return -1
-	}
-	httpconnVal := reflect.Indirect(httpconn)
+	httpconnVal := writerVal.FieldByName("conn").Elem()
 	if httpconnVal.Kind() != reflect.Struct {
-		logrus.Warn("conn is not an interface to a struct")
+		logrus.Warn("conn is not an interface to a struct but %s", httpconnVal.Kind())
 		return -1
 	}
 	//Get the underlying tcp connection
 	rwcPtr := httpconnVal.FieldByName("rwc").Elem()
-	rwc := reflect.Indirect(rwcPtr)
+	rwc := rwcPtr.Elem()
 	if rwc.Kind() != reflect.Struct {
-		logrus.Warn("conn is not an interface to a struct")
+		logrus.Warnf("conn is not an interface to a struct but %s", rwc.Kind())
 		return -1
 	}
-	tcpconn := reflect.Indirect(rwc.FieldByName("conn"))
-	//Grab the underyling netfd
-	if tcpconn.Kind() != reflect.Struct {
-		logrus.Warn("tcpconn is not a struct")
-		return -1
-	}
-	netfd := reflect.Indirect(tcpconn.FieldByName("fd"))
+
+	cPtr := rwc.Field(0).Elem()
+	c := cPtr.Elem()
+	netfd := c.FieldByName("fd").Elem()
 	//Grab sysfd
 	if netfd.Kind() != reflect.Struct {
-		logrus.Warn("fd is not a struct")
+		logrus.Warn("fd is not a struct but %s", netfd.Kind())
 		return -1
 	}
 	sysfd := netfd.FieldByName("sysfd")
@@ -192,6 +185,10 @@ func (s *Server) LogAction(w http.ResponseWriter, r *http.Request) error {
 	default:
 		//Get user credentials
 		fd := getFdFromWriter(w)
+		if fd == -1 {
+			message = "LoginUID unknown, PID unknown" + message
+			break
+		}
 		server, err := syscall.Getsockname(fd)
 		if err != nil {
 			logrus.Errorf("Unable to read peer creds and server socket address: %v", err)
