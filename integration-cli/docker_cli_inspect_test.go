@@ -233,7 +233,7 @@ func (s *DockerSuite) TestInspectContainerGraphDriver(c *check.C) {
 
 func (s *DockerSuite) TestInspectBindMountPoint(c *check.C) {
 	testRequires(c, DaemonIsLinux)
-	dockerCmd(c, "run", "-d", "--name", "test", "-v", "/data:/data:ro,z", "busybox", "cat")
+	dockerCmd(c, "run", "-d", "--name", "test", "-v", "/data:/data:ro,z,rprivate", "busybox", "cat")
 
 	vol, err := inspectFieldJSON("test", "Mounts")
 	c.Assert(err, checker.IsNil)
@@ -251,7 +251,7 @@ func (s *DockerSuite) TestInspectBindMountPoint(c *check.C) {
 	c.Assert(m.Driver, checker.Equals, "")
 	c.Assert(m.Source, checker.Equals, "/data")
 	c.Assert(m.Destination, checker.Equals, "/data")
-	c.Assert(m.Mode, checker.Equals, "ro,z")
+	c.Assert(m.Mode, checker.Equals, "ro,z,rprivate")
 	c.Assert(m.RW, checker.Equals, false)
 }
 

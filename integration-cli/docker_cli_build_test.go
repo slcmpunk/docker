@@ -6668,7 +6668,7 @@ func (s *DockerSuite) TestBuildWithBindMounts(c *check.C) {
 	f := filepath.Join(tmpDir, "file")
 	c.Assert(ioutil.WriteFile(f, []byte("foobar"), 0644), check.IsNil)
 
-	cmd := exec.Command(dockerBinary, "build", "-v", tmpDir+":/test/", "-")
+	cmd := exec.Command(dockerBinary, "build", "-v", tmpDir+":/test/:rprivate", "-")
 	cmd.Stdin = strings.NewReader(dockerfile)
 	out, _, err := runCommandWithOutput(cmd)
 	c.Assert(err, check.IsNil, check.Commentf(out))
@@ -6688,7 +6688,7 @@ func (s *DockerSuite) TestBuildWithBindMountsFile(c *check.C) {
 	f := filepath.Join(tmpDir, "file")
 	c.Assert(ioutil.WriteFile(f, []byte("foobar"), 0644), check.IsNil)
 
-	cmd := exec.Command(dockerBinary, "build", "-v", f+":/file", "-")
+	cmd := exec.Command(dockerBinary, "build", "-v", f+":/file:rprivate", "-")
 	cmd.Stdin = strings.NewReader(dockerfile)
 	out, _, err := runCommandWithOutput(cmd)
 	c.Assert(err, check.IsNil, check.Commentf(out))
@@ -6719,7 +6719,7 @@ func (s *DockerSuite) TestBuildWithBindMountsNotPersistedFile(c *check.C) {
 	f := filepath.Join(tmpDir, "file")
 	c.Assert(ioutil.WriteFile(f, []byte("foobar"), 0644), check.IsNil)
 
-	cmd := exec.Command(dockerBinary, "build", "-v", f+":/file", "-t", "notpersisted", "-")
+	cmd := exec.Command(dockerBinary, "build", "-v", f+":/file:rprivate", "-t", "notpersisted", "-")
 	cmd.Stdin = strings.NewReader(dockerfile)
 	out, _, err := runCommandWithOutput(cmd)
 	c.Assert(err, check.IsNil, check.Commentf(out))
@@ -6742,7 +6742,7 @@ func (s *DockerSuite) TestBuildWithBindMountsNotPersistedDir(c *check.C) {
 	f := filepath.Join(tmpDir, "file")
 	c.Assert(ioutil.WriteFile(f, []byte("foobar"), 0644), check.IsNil)
 
-	cmd := exec.Command(dockerBinary, "build", "-t", "notpersisted", "-v", tmpDir+":/test/", "-")
+	cmd := exec.Command(dockerBinary, "build", "-t", "notpersisted", "-v", tmpDir+":/test/"+":rprivate", "-")
 	cmd.Stdin = strings.NewReader(dockerfile)
 	out, _, err := runCommandWithOutput(cmd)
 	c.Assert(err, check.IsNil, check.Commentf(out))
@@ -6765,7 +6765,7 @@ func (s *DockerSuite) TestBuildWithBindMountsReadOnlyDefault(c *check.C) {
 	f := filepath.Join(tmpDir, "file")
 	c.Assert(ioutil.WriteFile(f, []byte("foobar"), 0644), check.IsNil)
 
-	cmd := exec.Command(dockerBinary, "build", "-t", "defaultro", "-v", tmpDir+":/test/", "-")
+	cmd := exec.Command(dockerBinary, "build", "-t", "defaultro", "-v", tmpDir+":/test/:rprivate", "-")
 	cmd.Stdin = strings.NewReader(dockerfile)
 	out, _, err := runCommandWithOutput(cmd)
 	c.Assert(err, check.NotNil, check.Commentf(out))
@@ -6785,7 +6785,7 @@ func (s *DockerSuite) TestBuildWithBindMountsWarnOnReadWrite(c *check.C) {
 	f := filepath.Join(tmpDir, "file")
 	c.Assert(ioutil.WriteFile(f, []byte("foobar"), 0644), check.IsNil)
 
-	cmd := exec.Command(dockerBinary, "build", "-t", "defaultro", "-v", tmpDir+":/test/:rw,Z", "-")
+	cmd := exec.Command(dockerBinary, "build", "-t", "defaultro", "-v", tmpDir+":/test/:rw,Z,rprivate", "-")
 	cmd.Stdin = strings.NewReader(dockerfile)
 	out, _, err := runCommandWithOutput(cmd)
 	c.Assert(err, check.IsNil, check.Commentf(out))
