@@ -445,14 +445,14 @@ func (s *DockerSuite) TestVolumesFromGetsProperMode(c *check.C) {
 	// TODO Windows: This test cannot yet run on a Windows daemon as Windows does
 	// not support read-only bind mounts as at TP4
 	testRequires(c, DaemonIsLinux)
-	dockerCmd(c, "run", "--name", "parent", "-v", "/test:/test:ro", "busybox", "true")
+	dockerCmd(c, "run", "--name", "parent", "-v", "/test:/test:ro,rprivate", "busybox", "true")
 
 	// Expect this "rw" mode to be be ignored since the inherited volume is "ro"
 	if _, _, err := dockerCmdWithError("run", "--volumes-from", "parent:rw", "busybox", "touch", "/test/file"); err == nil {
 		c.Fatal("Expected volumes-from to inherit read-only volume even when passing in `rw`")
 	}
 
-	dockerCmd(c, "run", "--name", "parent2", "-v", "/test:/test:ro", "busybox", "true")
+	dockerCmd(c, "run", "--name", "parent2", "-v", "/test:/test:ro,rprivate", "busybox", "true")
 
 	// Expect this to be read-only since both are "ro"
 	if _, _, err := dockerCmdWithError("run", "--volumes-from", "parent2:ro", "busybox", "touch", "/test/file"); err == nil {
@@ -1165,7 +1165,7 @@ func (s *DockerSuite) TestRunAllowBindMountingRoot(c *check.C) {
 		// Windows busybox will fail with Permission Denied on items such as pagefile.sys
 		dockerCmd(c, "run", "-v", `c:\:c:\host`, WindowsBaseImage, "cmd", "-c", "dir", `c:\host`)
 	} else {
-		dockerCmd(c, "run", "-v", "/:/host", "busybox", "ls", "/host")
+		dockerCmd(c, "run", "-v", "/:/host:rprivate", "busybox", "ls", "/host")
 	}
 }
 
@@ -1893,7 +1893,7 @@ func (s *DockerSuite) TestRunBindMounts(c *check.C) {
 	// TODO Windows Post TP4. Windows does not yet support :ro binds
 	if daemonPlatform != "windows" {
 		// Test reading from a read-only bind mount
-		out, _ := dockerCmd(c, "run", "-v", fmt.Sprintf("%s:/tmp:ro", tmpDir), "busybox", "ls", "/tmp")
+		out, _ := dockerCmd(c, "run", "-v", fmt.Sprintf("%s:/tmp:ro,rprivate", tmpDir), "busybox", "ls", "/tmp")
 		if !strings.Contains(out, "touch-me") {
 			c.Fatal("Container failed to read from bind mount")
 		}
@@ -1903,7 +1903,7 @@ func (s *DockerSuite) TestRunBindMounts(c *check.C) {
 	if daemonPlatform == "windows" {
 		dockerCmd(c, "run", "-v", fmt.Sprintf(`%s:c:\tmp:rw`, tmpDir), "busybox", "touch", "c:/tmp/holla")
 	} else {
-		dockerCmd(c, "run", "-v", fmt.Sprintf("%s:/tmp:rw", tmpDir), "busybox", "touch", "/tmp/holla")
+		dockerCmd(c, "run", "-v", fmt.Sprintf("%s:/tmp:rw,rprivate", tmpDir), "busybox", "touch", "/tmp/holla")
 	}
 
 	readFile(path.Join(tmpDir, "holla"), c) // Will fail if the file doesn't exist
@@ -1917,7 +1917,7 @@ func (s *DockerSuite) TestRunBindMounts(c *check.C) {
 	// Windows does not (and likely never will) support mounting a single file
 	if daemonPlatform != "windows" {
 		// test mount a file
-		dockerCmd(c, "run", "-v", fmt.Sprintf("%s/holla:/tmp/holla:rw", tmpDir), "busybox", "sh", "-c", "echo -n 'yotta' > /tmp/holla")
+		dockerCmd(c, "run", "-v", fmt.Sprintf("%s/holla:/tmp/holla:rw,rprivate", tmpDir), "busybox", "sh", "-c", "echo -n 'yotta' > /tmp/holla")
 		content := readFile(path.Join(tmpDir, "holla"), c) // Will fail if the file doesn't exist
 		expected := "yotta"
 		if content != expected {
@@ -2120,10 +2120,10 @@ func (s *DockerSuite) TestRunMountOrdering(c *check.C) {
 	}
 
 	dockerCmd(c, "run",
-		"-v", fmt.Sprintf("%s:"+prefix+"/tmp", tmpDir),
-		"-v", fmt.Sprintf("%s:"+prefix+"/tmp/foo", fooDir),
-		"-v", fmt.Sprintf("%s:"+prefix+"/tmp/tmp2", tmpDir2),
-		"-v", fmt.Sprintf("%s:"+prefix+"/tmp/tmp2/foo", fooDir),
+		"-v", fmt.Sprintf("%s:"+prefix+"/tmp:rprivate", tmpDir),
+		"-v", fmt.Sprintf("%s:"+prefix+"/tmp/foo:rprivate", fooDir),
+		"-v", fmt.Sprintf("%s:"+prefix+"/tmp/tmp2:rprivate", tmpDir2),
+		"-v", fmt.Sprintf("%s:"+prefix+"/tmp/tmp2/foo:rprivate", fooDir),
 		"busybox:latest", "sh", "-c",
 		"ls "+prefix+"/tmp/touch-me && ls "+prefix+"/tmp/foo/touch-me && ls "+prefix+"/tmp/tmp2/touch-me && ls "+prefix+"/tmp/tmp2/foo/touch-me")
 }
@@ -2150,11 +2150,11 @@ func (s *DockerSuite) TestRunReuseBindVolumeThatIsSymlink(c *check.C) {
 	defer os.RemoveAll(linkPath)
 
 	// Create first container
-	dockerCmd(c, "run", "-v", fmt.Sprintf("%s:"+prefix+"/tmp/test", linkPath), "busybox", "ls", prefix+"/tmp/test")
+	dockerCmd(c, "run", "-v", fmt.Sprintf("%s:"+prefix+"/tmp/test:rprivate", linkPath), "busybox", "ls", prefix+"/tmp/test")
 
 	// Create second container with same symlinked path
 	// This will fail if the referenced issue is hit with a "Volume exists" error
-	dockerCmd(c, "run", "-v", fmt.Sprintf("%s:"+prefix+"/tmp/test", linkPath), "busybox", "ls", prefix+"/tmp/test")
+	dockerCmd(c, "run", "-v", fmt.Sprintf("%s:"+prefix+"/tmp/test:rprivate", linkPath), "busybox", "ls", prefix+"/tmp/test")
 }
 
 //GH#10604: Test an "/etc" volume doesn't overlay special bind mounts in container
@@ -2198,7 +2198,7 @@ func (s *DockerSuite) TestVolumesNoCopyData(c *check.C) {
 	}
 
 	tmpDir := randomTmpDirPath("docker_test_bind_mount_copy_data", daemonPlatform)
-	if out, _, err := dockerCmdWithError("run", "-v", tmpDir+":/foo", "dataimage", "ls", "-lh", "/foo/bar"); err == nil || !strings.Contains(out, "No such file or directory") {
+	if out, _, err := dockerCmdWithError("run", "-v", tmpDir+":/foo:rprivate", "dataimage", "ls", "-lh", "/foo/bar"); err == nil || !strings.Contains(out, "No such file or directory") {
 		c.Fatalf("Data was copied on bind-mount but shouldn't be:\n%q", out)
 	}
 }
@@ -2432,7 +2432,7 @@ func (s *DockerSuite) TestRunMountShmMqueueFromHost(c *check.C) {
 	// Not applicable on Windows as uses Unix-specific capabilities
 	testRequires(c, SameHostDaemon, DaemonIsLinux, NotUserNamespace)
 
-	dockerCmd(c, "run", "-d", "--name", "shmfromhost", "-v", "/dev/shm:/dev/shm", "-v", "/dev/mqueue:/dev/mqueue", "busybox", "sh", "-c", "echo -n test > /dev/shm/test && touch /dev/mqueue/toto && top")
+	dockerCmd(c, "run", "-d", "--name", "shmfromhost", "-v", "/dev/shm:/dev/shm:rprivate", "-v", "/dev/mqueue:/dev/mqueue:rprivate", "busybox", "sh", "-c", "echo -n test > /dev/shm/test && touch /dev/mqueue/toto && top")
 	defer os.Remove("/dev/mqueue/toto")
 	defer os.Remove("/dev/shm/test")
 	volPath, err := inspectMountSourceField("shmfromhost", "/dev/shm")

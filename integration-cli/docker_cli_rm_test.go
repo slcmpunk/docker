@@ -12,7 +12,7 @@ func (s *DockerSuite) TestRmContainerWithRemovedVolume(c *check.C) {
 	testRequires(c, DaemonIsLinux)
 	testRequires(c, SameHostDaemon)
 
-	dockerCmd(c, "run", "--name", "losemyvolumes", "-v", "/tmp/testing:/test", "busybox", "true")
+	dockerCmd(c, "run", "--name", "losemyvolumes", "-v", "/tmp/testing:/test:rprivate", "busybox", "true")
 
 	err := os.Remove("/tmp/testing")
 	c.Assert(err, check.IsNil)

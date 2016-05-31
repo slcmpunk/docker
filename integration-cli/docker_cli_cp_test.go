@@ -464,7 +464,7 @@ func (s *DockerSuite) TestCpVolumePath(c *check.C) {
 	_, err = os.Create(tmpDir + "/test")
 	c.Assert(err, checker.IsNil)
 
-	out, _ := dockerCmd(c, "run", "-d", "-v", "/foo", "-v", tmpDir+"/test:/test", "-v", tmpDir+":/baz", "busybox", "/bin/sh", "-c", "touch /foo/bar")
+	out, _ := dockerCmd(c, "run", "-d", "-v", "/foo", "-v", tmpDir+"/test:/test:rprivate", "-v", tmpDir+":/baz:rprivate", "busybox", "/bin/sh", "-c", "touch /foo/bar")
 
 	containerID := strings.TrimSpace(out)
 
