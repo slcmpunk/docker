@@ -17,7 +17,7 @@ func (s *DockerSuite) TestCpCheckDestOwnership(c *check.C) {
 	testRequires(c, DaemonIsLinux, SameHostDaemon)
 	tmpVolDir := getTestDir(c, "test-cp-tmpvol")
 	containerID := makeTestContainer(c,
-		testContainerOptions{volumes: []string{fmt.Sprintf("%s:/tmpvol", tmpVolDir)}})
+		testContainerOptions{volumes: []string{fmt.Sprintf("%s:/tmpvol:rprivate", tmpVolDir)}})
 
 	tmpDir := getTestDir(c, "test-cp-to-check-ownership")
 	defer os.RemoveAll(tmpDir)

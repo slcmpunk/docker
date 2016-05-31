@@ -32,6 +32,21 @@ func getFdFromWriter(w http.ResponseWriter) int {
 		return -1
 	}
 
+	httpconn := writerVal.FieldByName("conn")
+	if !httpconn.IsValid() {
+		// probably writerVal contains "rw" which is the ResponseWriter
+		rwPtr := writerVal.FieldByName("rw")
+		if !rwPtr.IsValid() {
+			logrus.Warn("ResponseWriter does not contain a field named conn nor rw")
+			return -1
+		}
+		writerVal = reflect.Indirect(rwPtr.Elem())
+		if writerVal.Kind() != reflect.Struct {
+			logrus.Warnf("ResponseWriter is not a struct but %s", writerVal.Kind())
+			return -1
+		}
+	}
+
 	//Get the underlying http connection
 	httpconnVal := writerVal.FieldByName("conn").Elem()
 	if httpconnVal.Kind() != reflect.Struct {

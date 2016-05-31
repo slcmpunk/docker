@@ -523,10 +523,11 @@ func (b *Builder) create() (string, error) {
 			if volumePkg.ReadWrite(arr[2]) {
 				warnings = append(warnings, fmt.Sprintf("bind mount mode is read-write for %s, it will be changed to read-only", bind))
 				mode := "ro"
-				if strings.Contains(arr[2], "z") {
-					mode = mode + ",z"
-				} else if strings.Contains(arr[2], "Z") {
-					mode = mode + ",Z"
+				for _, o := range strings.Split(arr[2], ",") {
+					if o == "rw" {
+						continue
+					}
+					mode = mode + "," + o
 				}
 				b.options.Binds[i] = strings.Join([]string{arr[0], arr[1], mode}, ":")
 			}

@@ -70,7 +70,7 @@ func (s *DockerSuite) TestRunWithVolumesIsRecursive(c *check.C) {
 	c.Assert(err, checker.IsNil)
 	defer f.Close()
 
-	runCmd := exec.Command(dockerBinary, "run", "--name", "test-data", "--volume", fmt.Sprintf("%s:/tmp:ro", tmpDir), "busybox:latest", "ls", "/tmp/tmpfs")
+	runCmd := exec.Command(dockerBinary, "run", "--name", "test-data", "--volume", fmt.Sprintf("%s:/tmp:ro,rprivate", tmpDir), "busybox:latest", "ls", "/tmp/tmpfs")
 	out, _, _, err := runCommandWithStdoutStderr(runCmd)
 	c.Assert(err, checker.IsNil)
 	c.Assert(out, checker.Contains, filepath.Base(f.Name()), check.Commentf("Recursive bind mount test failed. Expected file not found"))
@@ -708,7 +708,7 @@ func (s *DockerSuite) TestRunTmpfsMountsEnsureOrdered(c *check.C) {
 	tmpFile, err := ioutil.TempFile("", "test")
 	c.Assert(err, check.IsNil)
 	defer tmpFile.Close()
-	out, _ := dockerCmd(c, "run", "--tmpfs", "/run", "-v", tmpFile.Name()+":/run/test", "busybox", "ls", "/run")
+	out, _ := dockerCmd(c, "run", "--tmpfs", "/run", "-v", tmpFile.Name()+":/run/test:rprivate", "busybox", "ls", "/run")
 	c.Assert(out, checker.Contains, "test")
 }
 
