@@ -28,14 +28,14 @@ func getFdFromWriter(w http.ResponseWriter) int {
 	//This is because the connection object is not exported by the writer.
 	writerVal := reflect.Indirect(reflect.ValueOf(w))
 	if writerVal.Kind() != reflect.Struct {
-		logrus.Warn("ResponseWriter is not a struct but %s", writerVal.Kind())
+		logrus.Warnf("ResponseWriter is not a struct but %s", writerVal.Kind())
 		return -1
 	}
 
 	//Get the underlying http connection
 	httpconnVal := writerVal.FieldByName("conn").Elem()
 	if httpconnVal.Kind() != reflect.Struct {
-		logrus.Warn("conn is not an interface to a struct but %s", httpconnVal.Kind())
+		logrus.Warnf("conn is not an interface to a struct but %s", httpconnVal.Kind())
 		return -1
 	}
 	//Get the underlying tcp connection
@@ -51,7 +51,7 @@ func getFdFromWriter(w http.ResponseWriter) int {
 	netfd := c.FieldByName("fd").Elem()
 	//Grab sysfd
 	if netfd.Kind() != reflect.Struct {
-		logrus.Warn("fd is not a struct but %s", netfd.Kind())
+		logrus.Warnf("fd is not a struct but %s", netfd.Kind())
 		return -1
 	}
 	sysfd := netfd.FieldByName("sysfd")
