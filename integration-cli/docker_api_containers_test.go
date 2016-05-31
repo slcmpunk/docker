@@ -181,7 +181,7 @@ func (s *DockerSuite) TestContainerApiStartVolumeBinds(c *check.C) {
 
 	bindPath := randomTmpDirPath("test", daemonPlatform)
 	config = map[string]interface{}{
-		"Binds": []string{bindPath + ":/tmp"},
+		"Binds": []string{bindPath + ":/tmp:rprivate"},
 	}
 	status, _, err = sockRequest("POST", "/containers/"+name+"/start", config)
 	c.Assert(err, checker.IsNil)
@@ -1167,7 +1167,7 @@ func (s *DockerSuite) TestContainersApiChunkedEncoding(c *check.C) {
 	client := httputil.NewClientConn(conn, nil)
 	defer client.Close()
 
-	bindCfg := strings.NewReader(`{"Binds": ["/tmp:/foo"]}`)
+	bindCfg := strings.NewReader(`{"Binds": ["/tmp:/foo:rprivate"]}`)
 	req, err := http.NewRequest("POST", "/containers/"+id+"/start", bindCfg)
 	c.Assert(err, checker.IsNil)
 	req.Header.Set("Content-Type", "application/json")
@@ -1188,7 +1188,7 @@ func (s *DockerSuite) TestContainersApiChunkedEncoding(c *check.C) {
 	c.Assert(json.NewDecoder(strings.NewReader(out)).Decode(&binds), checker.IsNil)
 	c.Assert(binds, checker.HasLen, 1, check.Commentf("Got unexpected binds: %v", binds))
 
-	expected := "/tmp:/foo"
+	expected := "/tmp:/foo:rprivate"
 	c.Assert(binds[0], checker.Equals, expected, check.Commentf("got incorrect bind spec"))
 }
 

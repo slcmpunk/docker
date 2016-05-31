@@ -292,12 +292,12 @@ func defaultVolumes(tmpDir string) []string {
 	if SameHostDaemon.Condition() {
 		return []string{
 			"/vol1",
-			fmt.Sprintf("%s:/vol2", tmpDir),
-			fmt.Sprintf("%s:/vol3", filepath.Join(tmpDir, "vol3")),
-			fmt.Sprintf("%s:/vol_ro:ro", filepath.Join(tmpDir, "vol_ro")),
+			fmt.Sprintf("%s:/vol2:rprivate", tmpDir),
+			fmt.Sprintf("%s:/vol3:rprivate", filepath.Join(tmpDir, "vol3")),
+			fmt.Sprintf("%s:/vol_ro:ro,rprivate", filepath.Join(tmpDir, "vol_ro")),
 		}
 	}
 
 	// Can't bind-mount volumes with separate host daemon.
-	return []string{"/vol1", "/vol2", "/vol3", "/vol_ro:/vol_ro:ro"}
+	return []string{"/vol1", "/vol2", "/vol3", "/vol_ro:/vol_ro:ro,rprivate"}
 }

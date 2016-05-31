@@ -99,7 +99,7 @@ func (s *DockerSuite) TestCommitTTY(c *check.C) {
 
 func (s *DockerSuite) TestCommitWithHostBindMount(c *check.C) {
 	testRequires(c, DaemonIsLinux)
-	dockerCmd(c, "run", "--name", "bind-commit", "-v", "/dev/null:/winning", "busybox", "true")
+	dockerCmd(c, "run", "--name", "bind-commit", "-v", "/dev/null:/winning:rprivate", "busybox", "true")
 
 	imageID, _ := dockerCmd(c, "commit", "bind-commit", "bindtest")
 	imageID = strings.TrimSpace(imageID)
