@@ -25,7 +25,7 @@ func main() {
 		c := make(chan os.Signal, 2048)
 		signal.Notify(c, os.Signal(syscall.SIGPIPE))
 		for {
-			<- c
+			<-c
 		}
 	}()
 
