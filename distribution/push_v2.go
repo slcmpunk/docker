@@ -155,30 +155,42 @@ func (p *v2Pusher) pushV2Tag(ctx context.Context, ref reference.NamedTagged, ima
 		return err
 	}
 
-	// Try schema2 first
-	builder := schema2.NewManifestBuilder(p.repo.Blobs(ctx), img.RawJSON())
-	manifest, err := manifestFromBuilder(ctx, builder, descriptors)
-	if err != nil {
-		return err
-	}
-
 	manSvc, err := p.repo.Manifests(ctx)
 	if err != nil {
 		return err
 	}
 
-	putOptions := []distribution.ManifestServiceOption{client.WithTag(ref.Tag())}
-	if _, err = manSvc.Put(ctx, manifest, putOptions...); err != nil {
-		logrus.Warnf("failed to upload schema2 manifest: %v - falling back to schema1", err)
-
-		builder = schema1.NewConfigManifestBuilder(p.repo.Blobs(ctx), p.config.TrustKey, p.repo.Name(), ref.Tag(), img.RawJSON())
+	var (
+		manifest   distribution.Manifest
+		putOptions = []distribution.ManifestServiceOption{client.WithTag(ref.Tag())}
+	)
+	if p.config.SkipSchemaV2 {
+		builder := schema1.NewConfigManifestBuilder(p.repo.Blobs(ctx), p.config.TrustKey, p.repo.Name(), ref.Tag(), img.RawJSON())
 		manifest, err = manifestFromBuilder(ctx, builder, descriptors)
 		if err != nil {
 			return err
 		}
-
 		if _, err = manSvc.Put(ctx, manifest, putOptions...); err != nil {
 			return err
+		}
+	} else {
+		// Try schema2 first
+		builder := schema2.NewManifestBuilder(p.repo.Blobs(ctx), img.RawJSON())
+		manifest, err = manifestFromBuilder(ctx, builder, descriptors)
+		if err != nil {
+			return err
+		}
+		if _, err = manSvc.Put(ctx, manifest, putOptions...); err != nil {
+			logrus.Warnf("failed to upload schema2 manifest: %v - falling back to schema1", err)
+
+			builder = schema1.NewConfigManifestBuilder(p.repo.Blobs(ctx), p.config.TrustKey, p.repo.Name(), ref.Tag(), img.RawJSON())
+			manifest, err = manifestFromBuilder(ctx, builder, descriptors)
+			if err != nil {
+				return err
+			}
+			if _, err = manSvc.Put(ctx, manifest, putOptions...); err != nil {
+				return err
+			}
 		}
 	}
 
