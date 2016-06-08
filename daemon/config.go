@@ -106,6 +106,8 @@ type CommonConfig struct {
 	// alive upon daemon shutdown/start
 	LiveRestoreEnabled bool `json:"live-restore,omitempty"`
 
+	SkipSchemaV2Push bool `json:"skip-schema2-push"`
+
 	// ClusterStore is the storage backend used for the cluster information. It is used by both
 	// multihost networking (to store networks and endpoints information) and by the node discovery
 	// mechanism.
@@ -197,6 +199,8 @@ func (config *Config) InstallCommonFlags(flags *pflag.FlagSet) {
 
 	config.MaxConcurrentDownloads = &maxConcurrentDownloads
 	config.MaxConcurrentUploads = &maxConcurrentUploads
+
+	flags.BoolVar(&config.SkipSchemaV2Push, "skip-schema2-push", false, "override push behavior to push only schema1 manifests")
 }
 
 // IsValueSet returns true if a configuration value

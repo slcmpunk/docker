@@ -74,6 +74,8 @@ type ImagePushConfig struct {
 	TrustKey libtrust.PrivateKey
 	// UploadManager dispatches uploads.
 	UploadManager *xfer.LayerUploadManager
+
+	SkipSchemaV2 bool
 }
 
 // ImageConfigStore handles storing and getting image configurations
