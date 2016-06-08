@@ -1123,6 +1123,7 @@ func (daemon *Daemon) PushImage(ctx context.Context, ref reference.Named, metaHe
 		ReferenceStore:   daemon.referenceStore,
 		TrustKey:         daemon.trustKey,
 		UploadManager:    daemon.uploadManager,
+		SkipSchemaV2:     daemon.configStore.SkipSchemaV2Push,
 	}
 
 	err := distribution.Push(ctx, ref, imagePushConfig)
