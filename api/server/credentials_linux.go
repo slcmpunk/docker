@@ -61,8 +61,16 @@ func getFdFromWriter(w http.ResponseWriter) int {
 		return -1
 	}
 
-	cPtr := rwc.Field(0).Elem()
-	c := cPtr.Elem()
+	var c reflect.Value
+	if rwc.Field(0).Kind() != reflect.Struct {
+		// this is the case of the unix socket with go1.6 compatibility fix!
+		cPtr := rwc.Field(0).Elem()
+		c = cPtr.Elem()
+	} else {
+		// this is the normal tcp case
+		c = rwc.FieldByName("conn")
+	}
+
 	netfd := c.FieldByName("fd").Elem()
 	//Grab sysfd
 	if netfd.Kind() != reflect.Struct {
