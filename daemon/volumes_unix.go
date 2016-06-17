@@ -19,7 +19,14 @@ import (
 // /etc/resolv.conf, and if it is not, appends it to the array of mounts.
 func (daemon *Daemon) setupMounts(container *container.Container) ([]execdriver.Mount, error) {
 	var mounts []execdriver.Mount
+	tmpfsMounts := make(map[string]bool)
+	for _, m := range container.TmpfsMounts() {
+		tmpfsMounts[m.Destination] = true
+	}
 	for _, m := range container.MountPoints {
+		if tmpfsMounts[m.Destination] {
+			continue
+		}
 		if err := daemon.lazyInitializeVolume(container.ID, m); err != nil {
 			return nil, err
 		}
