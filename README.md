@@ -2,6 +2,92 @@
 Red Hat is carrying a series of experimental patches that we feel are required
 for our customers or for our support engineering.
 
+#### BACKPORT: daemon: allow tmpfs to trump over VOLUME(s)
+
+https://github.com/docker/docker/pull/23301
+
+#### default-to-slave-mounting
+
+Volume default propagation mode changed from rprivate to rslave
+
+#### Allow-to-skip-manifest-schema-V2-push
+
+Add an hidden daemon flag --skip-schema2-push to force the daemon to push only docker
+manifest schema 2 version 1. This is needed for application like openshift
+who uses pull by digest and pushing a schema 2 version 2 manifest result in a different
+hash from a previous pull by digest with docker 1.9 (which was pushing using schema 2
+version 1)
+
+#### BACKPORT-pkg-archive-only-ignore-ENOTSUP-when-xattr-.patch
+
+https://github.com/docker/docker/pull/23410
+
+#### BACKPORT-pkg-archive-don-t-fail-Untar-if-xattrs-are-.patch
+
+https://github.com/docker/docker/pull/21251
+
+#### BACKPORT-When-container-had-no-layer-data-cleanupCon.patch
+
+https://github.com/docker/docker/pull/21802
+
+#### BACKPORT-Do-not-wait-for-container-on-stop-if-the-pr.patch
+
+https://github.com/docker/docker/pull/20967
+
+#### BACKPORT-daemon-fix-hanging-attaches-on-initial-star.patch
+
+https://github.com/docker/docker/pull/21048
+
+#### BACKPORT-Fix-plugin-file-descriptor-leaks.patch
+
+https://github.com/docker/docker/pull/20686
+
+#### BACKPORT-Fix-pulling-images-that-contain-no-layers-a.patch
+
+https://github.com/docker/docker/pull/21222
+
+#### BACKPORT-Ignore-invalid-host-header-between-go1.6-an.patch
+
+https://github.com/docker/docker/pull/22000
+https://github.com/docker/docker/pull/23046
+https://github.com/docker/docker/pull/22888
+
+#### BACKPORT-container-memory_store-fix-deadlock.patch
+
+https://github.com/docker/docker/pull/22918
+
+#### BACKPORT-Multiple-fixes-for-SELinux-labels.patch
+
+https://github.com/docker/docker/pull/22993
+
+#### BACKPORT-Move-resize-after-attaching.patch
+
+https://github.com/docker/docker/pull/19835
+
+#### BACKPORT-Fix-20508-Authz-plugin-enabled-with-large-t.patch
+
+https://github.com/docker/docker/pull/20602
+
+#### BACKPORT-Correctly-set-content-type-for-image-load.patch
+
+https://github.com/docker/engine-api/pull/98
+
+#### BACKPORT-Ignore-SIGPIPE-events.patch
+
+https://github.com/docker/docker/pull/22460
+
+#### BACKPORT-daemon-reorder-mounts-before-setting-them.patch
+
+https://github.com/docker/docker/pull/22329
+
+#### BACKPORT-Updated-libcontainer-user-so-that-numeric-u.patch
+
+https://github.com/opencontainers/runc/pull/708
+
+#### BACKPORT-Fixes-for-cgroup-parent-slices-to-expand-co.patch
+
+https://github.com/opencontainers/runc/pull/511
+
 #### BACKPORT:-Add-support-for-setting-sysctls.patch
 
 https://github.com/docker/docker/pull/19265
