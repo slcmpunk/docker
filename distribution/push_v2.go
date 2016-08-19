@@ -422,17 +422,13 @@ func (pd *v2PushDescriptor) Descriptor() distribution.Descriptor {
 // knows about, it returns the known digest and "true".
 func layerAlreadyExists(ctx context.Context, metadata []metadata.V2Metadata, repoInfo reference.Named, repo distribution.Repository, pushState *pushState) (distribution.Descriptor, bool, error) {
 	for _, meta := range metadata {
-		// Only check blobsums that are known to this repository or have an unknown source
-		if meta.SourceRepository != "" && meta.SourceRepository != repoInfo.FullName() {
-			continue
-		}
 		descriptor, err := repo.Blobs(ctx).Stat(ctx, meta.Digest)
 		switch err {
 		case nil:
 			descriptor.MediaType = schema2.MediaTypeLayer
 			return descriptor, true, nil
 		case distribution.ErrBlobUnknown:
-			// nop
+			return distribution.Descriptor{}, false, nil
 		default:
 			return distribution.Descriptor{}, false, err
 		}
