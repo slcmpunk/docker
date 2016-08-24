@@ -343,3 +343,22 @@ func assertURIRecorded(c *check.C, uris []string, uri string) {
 		c.Fatalf("Expected to find URI '%s', recorded uris '%s'", uri, strings.Join(uris, ","))
 	}
 }
+
+func (s *DockerAuthzSuite) TestAuthZPluginHeader(c *check.C) {
+	c.Assert(s.d.Start("--debug", "--authorization-plugin="+testAuthZPlugin), check.IsNil)
+	s.ctrl.reqRes.Allow = true
+	s.ctrl.resRes.Allow = true
+	c.Assert(s.d.LoadBusybox(), check.IsNil)
+
+	daemonURL, err := url.Parse(s.d.sock())
+
+	conn, err := net.DialTimeout(daemonURL.Scheme, daemonURL.Path, time.Second*10)
+	c.Assert(err, check.IsNil)
+	client := httputil.NewClientConn(conn, nil)
+	req, err := http.NewRequest("GET", "/version", nil)
+	c.Assert(err, check.IsNil)
+	resp, err := client.Do(req)
+
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.Header["Content-Type"][0], checker.Equals, "application/json")
+}
