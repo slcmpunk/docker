@@ -529,7 +529,7 @@ func (devices *DeviceSet) activateDeviceIfNeeded(info *devInfo, ignoreDeleted bo
 
 	// Make sure deferred removal on device is canceled, if one was
 	// scheduled.
-	if _, err := devices.cancelDeferredRemoval(info); err != nil {
+	if err := devices.cancelDeferredRemoval(info); err != nil {
 		return fmt.Errorf("devmapper: Device Deferred Removal Cancellation Failed: %s", err)
 	}
 
@@ -842,41 +842,6 @@ func (devices *DeviceSet) createRegisterDevice(hash string) (*devInfo, error) {
 	return info, nil
 }
 
-func (devices *DeviceSet) takeSnapshot(hash string, baseInfo *devInfo) error {
-	var doSuspend bool
-
-	if err := devices.poolHasFreeSpace(); err != nil {
-		return err
-	}
-
-	cancelledRemoval, err := devices.cancelDeferredRemoval(baseInfo)
-	if err != nil {
-		return err
-	}
-
-	// if deferred removal was cancelled, we can safely assume the device is active.
-	if cancelledRemoval {
-		doSuspend = true
-		defer devices.deactivateDevice(baseInfo)
-	} else {
-		devinfo, _ := devicemapper.GetInfo(baseInfo.Name())
-		doSuspend = devinfo != nil && devinfo.Exists != 0
-	}
-
-	if doSuspend {
-		if err := devicemapper.SuspendDevice(baseInfo.Name()); err != nil {
-			return err
-		}
-		defer devicemapper.ResumeDevice(baseInfo.Name())
-	}
-
-	if err := devices.createRegisterSnapDevice(hash, baseInfo); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (devices *DeviceSet) createRegisterSnapDevice(hash string, baseInfo *devInfo) error {
 	if err := devices.poolHasFreeSpace(); err != nil {
 		return err
@@ -894,7 +859,7 @@ func (devices *DeviceSet) createRegisterSnapDevice(hash string, baseInfo *devInf
 	}
 
 	for {
-		if err := devicemapper.CreateSnapDeviceRaw(devices.getPoolDevName(), deviceID, baseInfo.Name(), baseInfo.DeviceID); err != nil {
+		if err := devicemapper.CreateSnapDevice(devices.getPoolDevName(), deviceID, baseInfo.Name(), baseInfo.DeviceID); err != nil {
 			if devicemapper.DeviceIDExists(err) {
 				// Device ID already exists. This should not
 				// happen. Now we have a mechanism to find
@@ -1891,7 +1856,7 @@ func (devices *DeviceSet) AddDevice(hash, baseHash string) error {
 		return fmt.Errorf("devmapper: device %s already exists. Deleted=%v", hash, info.Deleted)
 	}
 
-	if err := devices.takeSnapshot(hash, baseInfo); err != nil {
+	if err := devices.createRegisterSnapDevice(hash, baseInfo); err != nil {
 		return err
 	}
 
@@ -2108,11 +2073,9 @@ func (devices *DeviceSet) removeDevice(devname string) error {
 	return err
 }
 
-func (devices *DeviceSet) cancelDeferredRemoval(info *devInfo) (bool, error) {
-	var cancelledRemoval bool
-
+func (devices *DeviceSet) cancelDeferredRemoval(info *devInfo) error {
 	if !devices.deferredRemove {
-		return cancelledRemoval, nil
+		return nil
 	}
 
 	logrus.Debugf("devmapper: cancelDeferredRemoval START(%s)", info.Name())
@@ -2121,24 +2084,23 @@ func (devices *DeviceSet) cancelDeferredRemoval(info *devInfo) (bool, error) {
 	devinfo, err := devicemapper.GetInfoWithDeferred(info.Name())
 
 	if devinfo != nil && devinfo.DeferredRemove == 0 {
-		return cancelledRemoval, nil
+		return nil
 	}
 
 	// Cancel deferred remove
 	for i := 0; i < 100; i++ {
 		err = devicemapper.CancelDeferredRemove(info.Name())
 		if err == nil {
-			cancelledRemoval = true
 			break
 		}
 
 		if err == devicemapper.ErrEnxio {
 			// Device is probably already gone. Return success.
-			return cancelledRemoval, nil
+			return nil
 		}
 
 		if err != devicemapper.ErrBusy {
-			return cancelledRemoval, err
+			return err
 		}
 
 		// If we see EBUSY it may be a transient error,
@@ -2147,7 +2109,7 @@ func (devices *DeviceSet) cancelDeferredRemoval(info *devInfo) (bool, error) {
 		time.Sleep(100 * time.Millisecond)
 		devices.Lock()
 	}
-	return cancelledRemoval, err
+	return err
 }
 
 // Shutdown shuts down the device by unmounting the root.
