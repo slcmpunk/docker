@@ -771,8 +771,8 @@ func activateDevice(poolName string, name string, deviceID int, size uint64, ext
 	return nil
 }
 
-// CreateSnapDeviceRaw creates a snapshot device. Caller is assumed to resume and suspend the device.
-func CreateSnapDeviceRaw(poolName string, deviceID int, baseName string, baseDeviceID int) error {
+// CreateSnapDeviceRaw creates a snapshot device. Caller needs to suspend and resume the origin device if it is active.
+func CreateSnapDeviceRaw(poolName string, deviceID int, baseDeviceID int) error {
 	task, err := TaskCreateNamed(deviceTargetMsg, poolName)
 	if task == nil {
 		return err
@@ -809,9 +809,11 @@ func CreateSnapDevice(poolName string, deviceID int, baseName string, baseDevice
 		}
 	}
 
-	if err := CreateSnapDeviceRaw(poolName, deviceID, baseName, baseDeviceID); err != nil {
+	if err := CreateSnapDeviceRaw(poolName, deviceID, baseDeviceID); err != nil {
 		if doSuspend {
-			ResumeDevice(baseName)
+			if err2 := ResumeDevice(baseName); err2 != nil {
+				return fmt.Errorf("CreateSnapDeviceRaw Error: (%v): ResumeDevice Error: (%v)", err, err2)
+			}
 		}
 		return err
 	}
