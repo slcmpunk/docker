@@ -6,20 +6,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"strings"
 
 	"bufio"
 	"bytes"
+	"os/exec"
+	"strconv"
+	"time"
+
 	"github.com/docker/docker/pkg/authorization"
 	"github.com/docker/docker/pkg/integration/checker"
 	"github.com/docker/docker/pkg/plugins"
 	"github.com/go-check/check"
-	"os/exec"
-	"strconv"
-	"time"
 )
 
 const (
