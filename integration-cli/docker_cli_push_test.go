@@ -9,14 +9,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
-	"github.com/docker/docker/cliconfig"
 	"github.com/docker/docker/pkg/integration/checker"
 	"github.com/go-check/check"
 )
@@ -290,7 +288,7 @@ func (s *DockerTrustSuite) TestTrustedPush(c *check.C) {
 	s.trustedCmd(pullCmd)
 	out, _, err = runCommandWithOutput(pullCmd)
 	c.Assert(err, check.IsNil, check.Commentf(out))
-	c.Assert(string(out), checker.Contains, "Status: Downloaded", check.Commentf(out))
+	c.Assert(string(out), checker.Contains, "Status: Image is up to date", check.Commentf(out))
 }
 
 func (s *DockerTrustSuite) TestTrustedPushWithEnvPasswords(c *check.C) {
@@ -309,7 +307,7 @@ func (s *DockerTrustSuite) TestTrustedPushWithEnvPasswords(c *check.C) {
 	s.trustedCmd(pullCmd)
 	out, _, err = runCommandWithOutput(pullCmd)
 	c.Assert(err, check.IsNil, check.Commentf(out))
-	c.Assert(string(out), checker.Contains, "Status: Downloaded", check.Commentf(out))
+	c.Assert(string(out), checker.Contains, "Status: Image is up to date", check.Commentf(out))
 }
 
 // This test ensures backwards compatibility with old ENV variables. Should be
@@ -367,7 +365,7 @@ func (s *DockerTrustSuite) TestTrustedPushWithExistingTag(c *check.C) {
 	s.trustedCmd(pullCmd)
 	out, _, err = runCommandWithOutput(pullCmd)
 	c.Assert(err, check.IsNil, check.Commentf(out))
-	c.Assert(string(out), checker.Contains, "Status: Downloaded", check.Commentf(out))
+	c.Assert(string(out), checker.Contains, "Status: Image is up to date", check.Commentf(out))
 }
 
 func (s *DockerTrustSuite) TestTrustedPushWithExistingSignedTag(c *check.C) {
@@ -514,16 +512,7 @@ func (s *DockerTrustSuite) TestTrustedPushWithReleasesDelegation(c *check.C) {
 	s.trustedCmd(pullCmd)
 	out, _, err = runCommandWithOutput(pullCmd)
 	c.Assert(err, check.IsNil, check.Commentf(out))
-	c.Assert(string(out), checker.Contains, "Status: Downloaded", check.Commentf(out))
-
-	// check to make sure that the target has been added to targets/releases and not targets
-	contents, err := ioutil.ReadFile(filepath.Join(cliconfig.ConfigDir(), "trust/tuf", repoName, "metadata/targets.json"))
-	c.Assert(err, check.IsNil, check.Commentf("Unable to read targets metadata"))
-	c.Assert(strings.Contains(string(contents), `"latest"`), checker.False, check.Commentf(string(contents)))
-
-	contents, err = ioutil.ReadFile(filepath.Join(cliconfig.ConfigDir(), "trust/tuf", repoName, "metadata/targets/releases.json"))
-	c.Assert(err, check.IsNil, check.Commentf("Unable to read targets/releases metadata"))
-	c.Assert(string(contents), checker.Contains, `"latest"`, check.Commentf(string(contents)))
+	c.Assert(string(out), checker.Contains, "Status: Image is up to date", check.Commentf(out))
 }
 
 func (s *DockerSuite) TestPushOfficialImage(c *check.C) {
