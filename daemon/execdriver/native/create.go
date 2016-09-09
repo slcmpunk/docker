@@ -17,8 +17,6 @@ import (
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
-
-	"github.com/Sirupsen/logrus"
 )
 
 // createContainer populates and configures the container type with the
@@ -39,6 +37,10 @@ func (d *Driver) createContainer(c *execdriver.Command, hooks execdriver.Hooks) 
 	}
 
 	if err := d.setupRemappedRoot(container, c); err != nil {
+		return nil, err
+	}
+
+	if err := d.setupHooks(container, c); err != nil {
 		return nil, err
 	}
 
@@ -153,20 +155,6 @@ func (d *Driver) createNetwork(container *configs.Config, c *execdriver.Command,
 		return nil
 	}
 
-	logrus.Infof("Config: %+v", c)
-
-	container.Hooks = &configs.Hooks{}
-	container.Hooks.Prestart = append(container.Hooks.Prestart,
-		configs.NewFunctionHook(func(s configs.HookState) error {
-			return dockerhooks.Prestart(s, c.ContainerJSONPath)
-		}),
-	)
-	container.Hooks.Poststop = append(container.Hooks.Poststop,
-		configs.NewFunctionHook(func(s configs.HookState) error {
-			return dockerhooks.Poststop(s, c.ContainerJSONPath)
-		}),
-	)
-
 	// only set up prestart hook if the namespace path is not set (this should be
 	// all cases *except* for --net=host shared networking)
 	container.Hooks.Prestart = append(container.Hooks.Prestart,
@@ -228,6 +216,21 @@ func (d *Driver) createUTS(container *configs.Config, c *execdriver.Command) err
 		return nil
 	}
 
+	return nil
+}
+
+func (d *Driver) setupHooks(container *configs.Config, c *execdriver.Command) error {
+	container.Hooks = &configs.Hooks{}
+	container.Hooks.Prestart = append(container.Hooks.Prestart,
+		configs.NewFunctionHook(func(s configs.HookState) error {
+			return dockerhooks.Prestart(s, c.ContainerJSONPath)
+		}),
+	)
+	container.Hooks.Poststop = append(container.Hooks.Poststop,
+		configs.NewFunctionHook(func(s configs.HookState) error {
+			return dockerhooks.Poststop(s, c.ContainerJSONPath)
+		}),
+	)
 	return nil
 }
 
