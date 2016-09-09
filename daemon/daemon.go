@@ -1485,8 +1485,10 @@ func (daemon *Daemon) GetContainerStats(container *container.Container) (*execdr
 
 	// Retrieve the nw statistics from libnetwork and inject them in the Stats
 	var nwStats []*libcontainer.NetworkInterface
-	if nwStats, err = daemon.getNetworkStats(container); err != nil {
-		return nil, err
+	if !container.Config.NetworkDisabled {
+		if nwStats, err = daemon.getNetworkStats(container); err != nil {
+			return nil, err
+		}
 	}
 	stats.Interfaces = nwStats
 
