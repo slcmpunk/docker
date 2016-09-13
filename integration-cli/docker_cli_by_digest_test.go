@@ -469,7 +469,7 @@ func (s *DockerRegistrySuite) TestDeleteImageByIDOnlyPulledByDigest(c *check.C) 
 
 	dockerCmd(c, "rmi", imageID)
 
-	_, err = inspectField(imageID, "Id")
+	_, err = inspectFieldWithError(imageID, "Id")
 	c.Assert(err, checker.NotNil, check.Commentf("image should have been deleted"))
 }
 
@@ -512,8 +512,7 @@ func (s *DockerRegistrySuite) TestDeleteImageWithDigestAndMultiRepoTag(c *check.
 	imageReference := fmt.Sprintf("%s@%s", repoName, pushDigest)
 	dockerCmd(c, "pull", imageReference)
 
-	imageID, err := inspectField(imageReference, "Id")
-	c.Assert(err, checker.IsNil)
+	imageID := inspectField(c, imageReference, "Id")
 
 	repoTag := repoName + ":sometag"
 	repoTag2 := repo2 + ":othertag"
@@ -523,17 +522,17 @@ func (s *DockerRegistrySuite) TestDeleteImageWithDigestAndMultiRepoTag(c *check.
 	dockerCmd(c, "rmi", repoTag)
 
 	// rmi should have deleted repoTag and image reference, but left repoTag2
-	inspectField(repoTag2, "Id")
-	_, err = inspectField(imageReference, "Id")
+	inspectField(c, repoTag2, "Id")
+	_, err = inspectFieldWithError(imageReference, "Id")
 	c.Assert(err, checker.NotNil, check.Commentf("image digest reference should have been removed"))
 
-	_, err = inspectField(repoTag, "Id")
+	_, err = inspectFieldWithError(repoTag, "Id")
 	c.Assert(err, checker.NotNil, check.Commentf("image tag reference should have been removed"))
 
 	dockerCmd(c, "rmi", repoTag2)
 
 	// rmi should have deleted the tag, the digest reference, and the image itself
-	_, err = inspectField(imageID, "Id")
+	_, err = inspectFieldWithError(imageID, "Id")
 	c.Assert(err, checker.NotNil, check.Commentf("image should have been deleted"))
 }
 
