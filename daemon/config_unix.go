@@ -35,6 +35,7 @@ type Config struct {
 	Runtimes             map[string]types.Runtime `json:"runtimes,omitempty"`
 	DefaultRuntime       string                   `json:"default-runtime,omitempty"`
 	OOMScoreAdjust       int                      `json:"oom-score-adjust,omitempty"`
+	SigCheck             bool                     `json:"signature-verification"`
 }
 
 // bridgeConfig stores all the bridge driver specific
@@ -94,6 +95,7 @@ func (config *Config) InstallFlags(cmd *flag.FlagSet, usageFn func(string) strin
 	cmd.Var(runconfigopts.NewNamedRuntimeOpt("runtimes", &config.Runtimes, stockRuntimeName), []string{"-add-runtime"}, usageFn("Register an additional OCI compatible runtime"))
 	cmd.StringVar(&config.DefaultRuntime, []string{"-default-runtime"}, stockRuntimeName, usageFn("Default OCI runtime for containers"))
 	cmd.IntVar(&config.OOMScoreAdjust, []string{"-oom-score-adjust"}, -500, usageFn("Set the oom_score_adj for the daemon"))
+	cmd.BoolVar(&config.SigCheck, []string{"-signature-verification"}, true, usageFn("Check image's signatures on pull"))
 
 	config.attachExperimentalFlags(cmd, usageFn)
 }

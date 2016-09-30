@@ -8,12 +8,15 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/containers/image/signature"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/registry/client/transport"
 	"github.com/docker/docker/image"
+	"github.com/docker/docker/reference"
+	gctx "golang.org/x/net/context"
 )
 
 func detectBaseLayer(is image.Store, m *schema1.Manifest, rootFS *image.RootFS) error {
@@ -66,4 +69,12 @@ func (ld *v2LayerDescriptor) open(ctx context.Context) (distribution.ReadSeekClo
 		rsc = nil
 	}
 	return rsc, err
+}
+
+func configurePolicyContext() (*signature.PolicyContext, error) {
+	return nil, nil
+}
+
+func (p *v2Puller) checkTrusted(c gctx.Context, ref reference.Named) (reference.Named, error) {
+	return ref, nil
 }
