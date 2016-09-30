@@ -2,12 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/docker/docker/pkg/integration/checker"
-	"github.com/docker/engine-api/types"
-	"github.com/go-check/check"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/docker/docker/pkg/integration/checker"
+	"github.com/docker/engine-api/types"
+	"github.com/go-check/check"
 )
 
 func waitForStatus(c *check.C, name string, prev string, expected string) {
@@ -51,6 +52,7 @@ func getHealth(c *check.C, name string) *types.Health {
 }
 
 func (s *DockerSuite) TestHealth(c *check.C) {
+	c.Skip("flaky")
 	testRequires(c, DaemonIsLinux) // busybox doesn't work on Windows
 
 	imageName := "testhealth"
