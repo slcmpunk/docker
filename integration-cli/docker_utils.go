@@ -317,6 +317,11 @@ func (d *Daemon) StartWithBusybox(arg ...string) error {
 	if err := d.Start(arg...); err != nil {
 		return err
 	}
+	return d.LoadBusybox()
+}
+
+// LoadBusybox will load the stored busybox into a newly started daemon
+func (d *Daemon) LoadBusybox() error {
 	bb := filepath.Join(d.folder, "busybox.tar")
 	if _, err := os.Stat(bb); err != nil {
 		if !os.IsNotExist(err) {
@@ -538,11 +543,11 @@ func (d *Daemon) getAndTestImageEntry(c *check.C, expectedImageCount int, repoNa
 	if expectedImageCount >= 0 && len(images) != expectedImageCount {
 		switch expectedImageCount {
 		case 0:
-			c.Fatalf("expected empty local image database, got %d images", len(images))
+			c.Fatalf("expected empty local image database, got %d images: %v", len(images), images)
 		case 1:
-			c.Fatalf("expected exactly 1 local image, got %d", len(images))
+			c.Fatalf("expected exactly 1 local image, got %d: %v", len(images), images)
 		default:
-			c.Fatalf("expected exactly %d local images, got %d", expectedImageCount, len(images))
+			c.Fatalf("expected exactly %d local images, got %d: %v", expectedImageCount, len(images), images)
 		}
 	}
 

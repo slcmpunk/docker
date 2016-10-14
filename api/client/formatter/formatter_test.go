@@ -282,7 +282,6 @@ func TestImageContextWrite(t *testing.T) {
 			},
 			`REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
 image               tag1                imageID1            24 hours ago        0 B
-image               <none>              imageID1            24 hours ago        0 B
 image               tag2                imageID2            24 hours ago        0 B
 <none>              <none>              imageID3            24 hours ago        0 B
 `,
@@ -293,7 +292,7 @@ image               tag2                imageID2            24 hours ago        
 					Format: "table {{.Repository}}",
 				},
 			},
-			"REPOSITORY\nimage\nimage\nimage\n<none>\n",
+			"REPOSITORY\nimage\nimage\n<none>\n",
 		},
 		{
 			ImageContext{
@@ -303,7 +302,6 @@ image               tag2                imageID2            24 hours ago        
 				Digest: true,
 			},
 			`REPOSITORY          DIGEST
-image               <none>
 image               sha256:cbbf2f9a99b47fc460d422812b6a5adff7dfee951d8fa2e4a98caa0382cfbdbf
 image               <none>
 <none>              <none>
@@ -316,7 +314,7 @@ image               <none>
 					Quiet:  true,
 				},
 			},
-			"REPOSITORY\nimage\nimage\nimage\n<none>\n",
+			"REPOSITORY\nimage\nimage\n<none>\n",
 		},
 		{
 			ImageContext{
@@ -325,7 +323,7 @@ image               <none>
 					Quiet:  true,
 				},
 			},
-			"imageID1\nimageID1\nimageID2\nimageID3\n",
+			"imageID1\nimageID2\nimageID3\n",
 		},
 		{
 			ImageContext{
@@ -336,8 +334,7 @@ image               <none>
 				Digest: true,
 			},
 			`REPOSITORY          TAG                 DIGEST                                                                    IMAGE ID            CREATED             SIZE
-image               tag1                <none>                                                                    imageID1            24 hours ago        0 B
-image               <none>              sha256:cbbf2f9a99b47fc460d422812b6a5adff7dfee951d8fa2e4a98caa0382cfbdbf   imageID1            24 hours ago        0 B
+image               tag1                sha256:cbbf2f9a99b47fc460d422812b6a5adff7dfee951d8fa2e4a98caa0382cfbdbf   imageID1            24 hours ago        0 B
 image               tag2                <none>                                                                    imageID2            24 hours ago        0 B
 <none>              <none>              <none>                                                                    imageID3            24 hours ago        0 B
 `,
@@ -350,7 +347,7 @@ image               tag2                <none>                                  
 				},
 				Digest: true,
 			},
-			"imageID1\nimageID1\nimageID2\nimageID3\n",
+			"imageID1\nimageID2\nimageID3\n",
 		},
 		// Raw Format
 		{
@@ -361,12 +358,6 @@ image               tag2                <none>                                  
 			},
 			fmt.Sprintf(`repository: image
 tag: tag1
-image_id: imageID1
-created_at: %s
-virtual_size: 0 B
-
-repository: image
-tag: <none>
 image_id: imageID1
 created_at: %s
 virtual_size: 0 B
@@ -383,7 +374,7 @@ image_id: imageID3
 created_at: %s
 virtual_size: 0 B
 
-`, expectedTime, expectedTime, expectedTime, expectedTime),
+`, expectedTime, expectedTime, expectedTime),
 		},
 		{
 			ImageContext{
@@ -394,13 +385,6 @@ virtual_size: 0 B
 			},
 			fmt.Sprintf(`repository: image
 tag: tag1
-digest: <none>
-image_id: imageID1
-created_at: %s
-virtual_size: 0 B
-
-repository: image
-tag: <none>
 digest: sha256:cbbf2f9a99b47fc460d422812b6a5adff7dfee951d8fa2e4a98caa0382cfbdbf
 image_id: imageID1
 created_at: %s
@@ -420,7 +404,7 @@ image_id: imageID3
 created_at: %s
 virtual_size: 0 B
 
-`, expectedTime, expectedTime, expectedTime, expectedTime),
+`, expectedTime, expectedTime, expectedTime),
 		},
 		{
 			ImageContext{
@@ -430,7 +414,6 @@ virtual_size: 0 B
 				},
 			},
 			`image_id: imageID1
-image_id: imageID1
 image_id: imageID2
 image_id: imageID3
 `,
@@ -442,7 +425,7 @@ image_id: imageID3
 					Format: "{{.Repository}}",
 				},
 			},
-			"image\nimage\nimage\n<none>\n",
+			"image\nimage\n<none>\n",
 		},
 		{
 			ImageContext{
@@ -451,7 +434,7 @@ image_id: imageID3
 				},
 				Digest: true,
 			},
-			"image\nimage\nimage\n<none>\n",
+			"image\nimage\n<none>\n",
 		},
 	}
 
