@@ -87,6 +87,8 @@ RUN apt-get update && apt-get install -y \
 	python-mock \
 	python-pip \
 	zip \
+	gpgme-devel \
+	libassuan-devel \
 	&& pip install awscli==1.10.15
 # Get lvm2 source for compiling statically
 ENV LVM2_VERSION 2.02.103
@@ -274,6 +276,17 @@ RUN set -x \
 	&& cp bin/containerd /usr/local/bin/docker-containerd \
 	&& cp bin/containerd-shim /usr/local/bin/docker-containerd-shim \
 	&& cp bin/ctr /usr/local/bin/docker-containerd-ctr \
+	&& rm -rf "$GOPATH"
+
+# Install skopeo
+ENV SKOPEO_COMMIT v0.1.16
+RUN set -x \
+	&& export GOPATH="$(mktemp -d)" \
+	&& git clone https://github.com/projectatomic/skopeo.git "$GOPATH/src/github.com/projectatomic/skopeo" \
+	&& cd "$GOPATH/src/github.com/projectatomic/skopeo" \
+	&& git checkout -q "$SKOPEO_COMMIT" \
+	&& make binary-local \
+	&& make install GO_MD2MAN="/usr/local/bin/go-md2man" \
 	&& rm -rf "$GOPATH"
 
 # Wrap all commands in the "docker-in-docker" script to allow nested containers
