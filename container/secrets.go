@@ -23,10 +23,10 @@ type SecretData struct {
 // SaveTo saves secret data to given directory
 func (s SecretData) SaveTo(dir string) error {
 	path := filepath.Join(dir, s.Name)
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil && !os.IsExist(err) {
 		return err
 	}
-	return ioutil.WriteFile(path, s.Data, 0755)
+	return ioutil.WriteFile(path, s.Data, 0700)
 }
 
 func readAll(root, prefix string) ([]SecretData, error) {
