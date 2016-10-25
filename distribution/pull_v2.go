@@ -11,6 +11,7 @@ import (
 	"runtime"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/containers/image/signature"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/manifestlist"
@@ -54,6 +55,9 @@ type v2Puller struct {
 	// confirmedV2 is set to true if we confirm we're talking to a v2
 	// registry. This is used to limit fallbacks to the v1 protocol.
 	confirmedV2 bool
+
+	policyContext *signature.PolicyContext
+	originalRef   reference.Named
 }
 
 func (p *v2Puller) Pull(ctx context.Context, ref reference.Named) (err error) {
@@ -88,6 +92,14 @@ func (p *v2Puller) Pull(ctx context.Context, ref reference.Named) (err error) {
 func (p *v2Puller) pullV2Repository(ctx context.Context, ref reference.Named) (err error) {
 	var layersDownloaded bool
 	if !reference.IsNameOnly(ref) {
+		var err error
+		if p.config.SignatureCheck {
+			ref, err = p.checkTrusted(ctx, ref)
+			if err != nil {
+				// do not fallback to v1 is there was any error checking image's signatures
+				return err
+			}
+		}
 		layersDownloaded, err = p.pullV2Tag(ctx, ref)
 		if err != nil {
 			return err
@@ -95,9 +107,11 @@ func (p *v2Puller) pullV2Repository(ctx context.Context, ref reference.Named) (e
 	} else {
 		tags, err := p.repo.Tags(ctx).All(ctx)
 		if err != nil {
-			// If this repository doesn't exist on V2, we should
-			// permit a fallback to V1.
-			return allowV1Fallback(err)
+			if p.config.SignatureCheck {
+				return err
+			} else {
+				return allowV1Fallback(err)
+			}
 		}
 
 		// The v2 registry knows about this repository, so we will not
@@ -110,7 +124,17 @@ func (p *v2Puller) pullV2Repository(ctx context.Context, ref reference.Named) (e
 			if err != nil {
 				return err
 			}
-			pulledNew, err := p.pullV2Tag(ctx, tagRef)
+			var ref reference.Named
+			ref = tagRef
+			if p.config.SignatureCheck {
+				trustedRef, err := p.checkTrusted(ctx, tagRef)
+				if err != nil {
+					p.originalRef = nil
+					return err
+				}
+				ref = trustedRef
+			}
+			pulledNew, err := p.pullV2Tag(ctx, ref)
 			if err != nil {
 				// Since this is the pull-all-tags case, don't
 				// allow an error pulling a particular tag to
@@ -126,7 +150,9 @@ func (p *v2Puller) pullV2Repository(ctx context.Context, ref reference.Named) (e
 		}
 	}
 
-	writeStatus(ref.String(), p.config.ProgressOutput, layersDownloaded)
+	if p.originalRef != nil {
+		writeStatus(p.originalRef.String(), p.config.ProgressOutput, layersDownloaded)
+	}
 
 	return nil
 }
@@ -344,7 +370,11 @@ func (p *v2Puller) pullV2Tag(ctx context.Context, ref reference.Named) (tagUpdat
 		// all registry versions.
 		manifest, err = manSvc.Get(ctx, "", distribution.WithTag(tagged.Tag()))
 		if err != nil {
-			return false, allowV1Fallback(err)
+			if p.config.SignatureCheck {
+				return false, err
+			} else {
+				return false, allowV1Fallback(err)
+			}
 		}
 		tagOrDigest = tagged.Tag()
 	} else if digested, isDigested := ref.(reference.Canonical); isDigested {
@@ -398,6 +428,11 @@ func (p *v2Puller) pullV2Tag(ctx context.Context, ref reference.Named) (tagUpdat
 	oldTagImageID, err := p.config.ReferenceStore.Get(ref)
 	if err == nil {
 		if oldTagImageID == imageID {
+			if p.config.SignatureCheck {
+				if err := p.addTrustedTag(imageID); err != nil {
+					return false, err
+				}
+			}
 			return false, addDigestReference(p.config.ReferenceStore, ref, manifestDigest, imageID)
 		}
 	} else if err != reference.ErrDoesNotExist {
@@ -408,6 +443,11 @@ func (p *v2Puller) pullV2Tag(ctx context.Context, ref reference.Named) (tagUpdat
 		if err = p.config.ReferenceStore.AddDigest(canonical, imageID, true); err != nil {
 			return false, err
 		}
+		if p.config.SignatureCheck {
+			if err := p.addTrustedTag(imageID); err != nil {
+				return false, err
+			}
+		}
 	} else {
 		if err = addDigestReference(p.config.ReferenceStore, ref, manifestDigest, imageID); err != nil {
 			return false, err
@@ -417,6 +457,17 @@ func (p *v2Puller) pullV2Tag(ctx context.Context, ref reference.Named) (tagUpdat
 		}
 	}
 	return true, nil
+}
+
+func (p *v2Puller) addTrustedTag(id image.ID) error {
+	if p.policyContext != nil {
+		if _, ok := p.originalRef.(reference.Canonical); !ok {
+			if err := p.config.ReferenceStore.AddTag(p.originalRef, id, true); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (p *v2Puller) pullSchema1(ctx context.Context, ref reference.Named, unverifiedManifest *schema1.SignedManifest) (imageID image.ID, manifestDigest digest.Digest, err error) {
