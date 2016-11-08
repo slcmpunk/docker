@@ -701,50 +701,41 @@ func (s *DockerRegistriesSuite) TestPullWithPolicy(c *check.C) {
 	c.Assert(matches, checker.HasLen, 2, check.Commentf("unable to parse digest from pull output: %s", out))
 	dgst := matches[1]
 
-	// test that I can pull by a digest and tag when the signature is valid for the tag
-	// default referencesByDigest == allow
-	//
-	// FIXME: requires containers/image#129 to make this test below work
-	//        when that's in, change this test to assert success
-	//
+	// test that I can also pull by digest when the signature is valid for the tag
 	dgstRef := fmt.Sprintf("%s/busybox@%s", s.reg1.url, dgst)
-	_, _, err = dockerCmdWithError("pull", dgstRef)
-	c.Assert(err, check.NotNil)
+	dockerCmd(c, "pull", dgstRef)
 
 	dgstRefUnsigned := fmt.Sprintf("%s/busybox@%s", s.reg1.url, unsignedDigest)
 	out, _, err = dockerCmdWithError("pull", dgstRefUnsigned)
 	c.Assert(err, check.NotNil)
 	c.Assert(out, checker.Contains, "no signature exists")
 
-	// test that I can pull by tag but NOT by digest when the signature is valid for the tag
-	//
-	// FIXME: requires containers/image#129 to make this test below work
-	//        when that's in, change this test to assert success
-	//
-	//// when referencesByDigest == reject
-	//policy2 := fmt.Sprintf(`{
-	//"default": [
-	//{
-	//"type": "reject"
-	//}
-	//],
-	//"transports": {
-	//"docker": {
-	//"%s/busybox": [
-	//{
-	//"referencesByDigest": "reject",
-	//"type": "signedBy",
-	//"keyType": "GPGKeys",
-	//"keyPath": "/root/personal-pubkey.gpg"
-	//}
-	//]
-	//}
-	//}
-	//}`, s.reg1.url)
-	//c.Assert(ioutil.WriteFile("/etc/containers/policy.json", []byte(policy2), 0755), check.IsNil)
-	//out, _, err = dockerCmdWithError("pull", dgstRef)
-	//c.Assert(err, check.NotNil)
-	//c.Assert(out, checker.Contains, "is not accepted")
+	// test that I cannot pull by digest when the signature is valid for the tag
+	policy2 := fmt.Sprintf(`{
+		"default": [
+		{
+			"type": "reject"
+		}
+		],
+		"transports": {
+			"docker": {
+				"%s/busybox": [
+				{
+					"type": "signedBy",
+					"signedIdentity": {
+						"type": "matchExact"
+					},
+					"keyType": "GPGKeys",
+					"keyPath": "/root/personal-pubkey.gpg"
+				}
+				]
+			}
+		}
+	}`, s.reg1.url)
+	c.Assert(ioutil.WriteFile("/etc/containers/policy.json", []byte(policy2), 0755), check.IsNil)
+	out, _, err = dockerCmdWithError("pull", dgstRef)
+	c.Assert(err, check.NotNil)
+	c.Assert(out, checker.Contains, "is not accepted")
 
 	// test pull default policy reject + allow anything from reg2
 	policy3 := fmt.Sprintf(`{
