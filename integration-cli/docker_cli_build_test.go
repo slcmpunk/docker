@@ -7311,3 +7311,154 @@ func (s *DockerSuite) TestBuildNetContainer(c *check.C) {
 	host, _ := dockerCmd(c, "run", "testbuildnetcontainer", "cat", "/otherhost")
 	c.Assert(strings.TrimSpace(host), check.Equals, "foobar")
 }
+
+// Test case for #24693
+func (s *DockerSuite) TestBuildRunEmptyLineAfterEscape(c *check.C) {
+	name := "testbuildemptylineafterescape"
+	_, out, err := buildImageWithOut(name,
+		`
+FROM busybox
+RUN echo x \
+
+RUN echo y
+RUN echo z
+# Comment requires the '#' to start from position 1
+# RUN echo w
+`, true)
+	c.Assert(err, checker.IsNil)
+	c.Assert(out, checker.Contains, "Step 1/4 : FROM busybox")
+	c.Assert(out, checker.Contains, "Step 2/4 : RUN echo x")
+	c.Assert(out, checker.Contains, "Step 3/4 : RUN echo y")
+	c.Assert(out, checker.Contains, "Step 4/4 : RUN echo z")
+
+	// With comment, see #24693
+	name = "testbuildcommentandemptylineafterescape"
+	_, out, err = buildImageWithOut(name,
+		`
+FROM busybox
+RUN echo grafana && \
+    echo raintank \
+#echo env-load
+RUN echo vegeta
+`, true)
+	c.Assert(err, checker.IsNil)
+	c.Assert(out, checker.Contains, "Step 1/3 : FROM busybox")
+	c.Assert(out, checker.Contains, "Step 2/3 : RUN echo grafana &&     echo raintank")
+	c.Assert(out, checker.Contains, "Step 3/3 : RUN echo vegeta")
+}
+
+// Verifies if COPY file . when WORKDIR is set to a non-existing directory,
+// the directory is created and the file is copied into the directory,
+// as opposed to the file being copied as a file with the name of the
+// directory. Fix for 27545 (found on Windows, but regression good for Linux too)
+func (s *DockerSuite) TestBuildCopyFileDotWithWorkdir(c *check.C) {
+	name := "testbuildcopyfiledotwithworkdir"
+
+	ctx, err := fakeContext(`FROM busybox
+WORKDIR /foo
+COPY file .
+RUN ["cat", "/foo/file"]
+`,
+		map[string]string{})
+	if err != nil {
+		c.Fatal(err)
+	}
+	defer ctx.Close()
+	if err := ctx.Add("file", "content"); err != nil {
+		c.Fatal(err)
+	}
+	if _, err = buildImageFromContext(name, ctx, true); err != nil {
+		c.Fatal(err)
+	}
+}
+
+func (s *DockerSuite) TestBuildSquashParent(c *check.C) {
+	testRequires(c, ExperimentalDaemon)
+	dockerFile := `
+		FROM busybox
+		RUN echo hello > /hello
+		RUN echo world >> /hello
+		RUN echo hello > /remove_me
+		ENV HELLO world
+		RUN rm /remove_me
+		`
+	// build and get the ID that we can use later for history comparison
+	origID, err := buildImage("test", dockerFile, false)
+	c.Assert(err, checker.IsNil)
+
+	// build with squash
+	id, err := buildImage("test", dockerFile, true, "--squash")
+	c.Assert(err, checker.IsNil)
+
+	out, _ := dockerCmd(c, "run", "--rm", id, "/bin/sh", "-c", "cat /hello")
+	c.Assert(strings.TrimSpace(out), checker.Equals, "hello\nworld")
+
+	dockerCmd(c, "run", "--rm", id, "/bin/sh", "-c", "[ ! -f /remove_me ]")
+	dockerCmd(c, "run", "--rm", id, "/bin/sh", "-c", `[ "$(echo $HELLO)" == "world" ]`)
+
+	// make sure the ID produced is the ID of the tag we specified
+	inspectID, err := inspectImage("test", ".ID")
+	c.Assert(err, checker.IsNil)
+	c.Assert(inspectID, checker.Equals, id)
+
+	origHistory, _ := dockerCmd(c, "history", origID)
+	testHistory, _ := dockerCmd(c, "history", "test")
+
+	splitOrigHistory := strings.Split(strings.TrimSpace(origHistory), "\n")
+	splitTestHistory := strings.Split(strings.TrimSpace(testHistory), "\n")
+	c.Assert(len(splitTestHistory), checker.Equals, len(splitOrigHistory)+1)
+
+	out, err = inspectImage(id, "len .RootFS.Layers")
+	c.Assert(err, checker.IsNil)
+	c.Assert(strings.TrimSpace(out), checker.Equals, "3")
+}
+
+func (s *DockerSuite) TestBuildContChar(c *check.C) {
+	name := "testbuildcontchar"
+
+	_, out, err := buildImageWithOut(name,
+		`FROM busybox\`, true)
+	c.Assert(err, checker.IsNil)
+	c.Assert(out, checker.Contains, "Step 1/1 : FROM busybox")
+
+	_, out, err = buildImageWithOut(name,
+		`FROM busybox
+		 RUN echo hi \`, true)
+	c.Assert(err, checker.IsNil)
+	c.Assert(out, checker.Contains, "Step 1/2 : FROM busybox")
+	c.Assert(out, checker.Contains, "Step 2/2 : RUN echo hi\n")
+
+	_, out, err = buildImageWithOut(name,
+		`FROM busybox
+		 RUN echo hi \\`, true)
+	c.Assert(err, checker.IsNil)
+	c.Assert(out, checker.Contains, "Step 1/2 : FROM busybox")
+	c.Assert(out, checker.Contains, "Step 2/2 : RUN echo hi \\\n")
+
+	_, out, err = buildImageWithOut(name,
+		`FROM busybox
+		 RUN echo hi \\\`, true)
+	c.Assert(err, checker.IsNil)
+	c.Assert(out, checker.Contains, "Step 1/2 : FROM busybox")
+	c.Assert(out, checker.Contains, "Step 2/2 : RUN echo hi \\\\\n")
+}
+
+// TestBuildOpaqueDirectory tests that a build succeeds which
+// creates opaque directories.
+// See https://github.com/docker/docker/issues/25244
+func (s *DockerSuite) TestBuildOpaqueDirectory(c *check.C) {
+	testRequires(c, DaemonIsLinux)
+
+	dockerFile := `
+		FROM busybox
+		RUN mkdir /dir1 && touch /dir1/f1
+		RUN rm -rf /dir1 && mkdir /dir1 && touch /dir1/f2
+		RUN touch /dir1/f3
+		RUN [ -f /dir1/f2 ]
+		`
+
+	// Test that build succeeds, last command fails if opaque directory
+	// was not handled correctly
+	_, err := buildImage("testopaquedirectory", dockerFile, false)
+	c.Assert(err, checker.IsNil)
+}
