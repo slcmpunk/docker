@@ -74,7 +74,6 @@ func patchLines(patched string, original string, osName string) error {
 			if !strings.Contains(scanner.Text(), dfConfig.Markers[0]) {
 				fmt.Fprintln(w, scanner.Text())
 			} else {
-				fmt.Fprintln(w, scanner.Text())
 				fmt.Fprintln(w, dfConfig.Distribution)
 				for _, dep := range dfConfig.Dependencies {
 					fmt.Fprintln(w, dep)
@@ -83,46 +82,39 @@ func patchLines(patched string, original string, osName string) error {
 			}
 		case 1:
 			if strings.Contains(scanner.Text(), dfConfig.Markers[1]) {
-				fmt.Fprintln(w, scanner.Text())
 				i++
 			}
 		case 2:
 			if !strings.Contains(scanner.Text(), dfConfig.Markers[2]) {
 				fmt.Fprintln(w, scanner.Text())
 			} else {
-				fmt.Fprintln(w, scanner.Text())
 				fmt.Fprintln(w, dfConfig.SeccompPrefix)
 				i++
 			}
 		case 3:
 			if strings.Contains(scanner.Text(), dfConfig.Markers[3]) {
-				fmt.Fprintln(w, scanner.Text())
 				i++
 			}
 		case 4:
 			if !strings.Contains(scanner.Text(), dfConfig.Markers[4]) {
 				fmt.Fprintln(w, scanner.Text())
 			} else {
-				fmt.Fprintln(w, scanner.Text())
 				fmt.Fprintln(w, dfConfig.Buildtags)
 				i++
 			}
 		case 5:
 			if strings.Contains(scanner.Text(), dfConfig.Markers[5]) {
-				fmt.Fprintln(w, scanner.Text())
 				i++
 			}
 		case 6:
 			if !strings.Contains(scanner.Text(), dfConfig.Markers[6]) {
 				fmt.Fprintln(w, scanner.Text())
 			} else {
-				fmt.Fprintln(w, scanner.Text())
 				fmt.Fprintln(w, dfConfig.BuildtagsRunc)
 				i++
 			}
 		case 7:
 			if strings.Contains(scanner.Text(), dfConfig.Markers[7]) {
-				fmt.Fprintln(w, scanner.Text())
 				i++
 			}
 		default:
