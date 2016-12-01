@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -31,11 +32,16 @@ const (
 	dockerCfgObsolete = ".dockercfg"
 
 	baseURL       = "%s://%s/v2/"
+	baseURLV1     = "%s://%s/v1/_ping"
 	tagsURL       = "%s/tags/list"
 	manifestURL   = "%s/manifests/%s"
 	blobsURL      = "%s/blobs/%s"
 	blobUploadURL = "%s/blobs/uploads/"
 )
+
+// ErrV1NotSupported is returned when we're trying to talk to a
+// docker V1 registry.
+var ErrV1NotSupported = errors.New("can't talk to a V1 docker registry")
 
 // dockerClient is configuration for dealing with a single Docker registry.
 type dockerClient struct {
@@ -139,13 +145,14 @@ func (c *dockerClient) makeRequest(method, url string, headers map[string][]stri
 	}
 
 	url = fmt.Sprintf(baseURL, c.scheme, c.registry) + url
-	return c.makeRequestToResolvedURL(method, url, headers, stream, -1)
+	return c.makeRequestToResolvedURL(method, url, headers, stream, -1, true)
 }
 
 // makeRequestToResolvedURL creates and executes a http.Request with the specified parameters, adding authentication and TLS options for the Docker client.
 // streamLen, if not -1, specifies the length of the data expected on stream.
 // makeRequest should generally be preferred.
-func (c *dockerClient) makeRequestToResolvedURL(method, url string, headers map[string][]string, stream io.Reader, streamLen int64) (*http.Response, error) {
+// TODO(runcom): too many arguments here, use a struct
+func (c *dockerClient) makeRequestToResolvedURL(method, url string, headers map[string][]string, stream io.Reader, streamLen int64, sendAuth bool) (*http.Response, error) {
 	req, err := http.NewRequest(method, url, stream)
 	if err != nil {
 		return nil, err
@@ -162,7 +169,7 @@ func (c *dockerClient) makeRequestToResolvedURL(method, url string, headers map[
 	if c.ctx != nil && c.ctx.DockerRegistryUserAgent != "" {
 		req.Header.Add("User-Agent", c.ctx.DockerRegistryUserAgent)
 	}
-	if c.wwwAuthenticate != "" {
+	if c.wwwAuthenticate != "" && sendAuth {
 		if err := c.setupRequestAuth(req); err != nil {
 			return nil, err
 		}
@@ -285,10 +292,6 @@ func getAuth(ctx *types.SystemContext, registry string) (string, string, error) 
 	if ctx != nil && ctx.DockerAuthConfig != nil {
 		return ctx.DockerAuthConfig.Username, ctx.DockerAuthConfig.Password, nil
 	}
-	// TODO(runcom): get this from *cli.Context somehow
-	//if username != "" && password != "" {
-	//return username, password, nil
-	//}
 	var dockerAuth dockerConfigFile
 	dockerCfgPath := filepath.Join(getDefaultConfigDir(".docker"), dockerCfgFileName)
 	if _, err := os.Stat(dockerCfgPath); err == nil {
@@ -355,7 +358,7 @@ type pingResponse struct {
 func (c *dockerClient) ping() (*pingResponse, error) {
 	ping := func(scheme string) (*pingResponse, error) {
 		url := fmt.Sprintf(baseURL, scheme, c.registry)
-		resp, err := c.makeRequestToResolvedURL("GET", url, nil, nil, -1)
+		resp, err := c.makeRequestToResolvedURL("GET", url, nil, nil, -1, true)
 		logrus.Debugf("Ping %s err %#v", url, err)
 		if err != nil {
 			return nil, err
@@ -384,6 +387,32 @@ func (c *dockerClient) ping() (*pingResponse, error) {
 	pr, err := ping("https")
 	if err != nil && c.ctx != nil && c.ctx.DockerInsecureSkipTLSVerify {
 		pr, err = ping("http")
+	}
+	if err != nil {
+		// best effort to understand if we're talking to a V1 registry
+		pingV1 := func(scheme string) bool {
+			url := fmt.Sprintf(baseURLV1, scheme, c.registry)
+			resp, err := c.makeRequestToResolvedURL("GET", url, nil, nil, -1, true)
+			logrus.Debugf("Ping %s err %#v", url, err)
+			if err != nil {
+				return false
+			}
+			defer resp.Body.Close()
+			logrus.Debugf("Ping %s status %d", scheme+"://"+c.registry+"/v1/_ping", resp.StatusCode)
+			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
+				return false
+			}
+			return true
+		}
+		isV1 := pingV1("https")
+		if !isV1 && c.ctx != nil && c.ctx.DockerInsecureSkipTLSVerify {
+			isV1 = pingV1("http")
+		}
+		if isV1 {
+			err = ErrV1NotSupported
+		} else {
+			err = fmt.Errorf("pinging docker registry returned %+v", err)
+		}
 	}
 	return pr, err
 }
