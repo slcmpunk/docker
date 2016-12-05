@@ -94,6 +94,7 @@ type CommonConfig struct {
 	TrustKeyPath         string              `json:"-"`
 	CorsHeaders          string              `json:"api-cors-header,omitempty"`
 	EnableCors           bool                `json:"api-enable-cors,omitempty"`
+	EnableSecrets        bool                `json:"enable-secrets,omitempty"`
 	LiveRestore          bool                `json:"live-restore,omitempty"`
 	BlockedRegistries    []string            `json:"block-registry,omitempty"`
 	AdditionalRegistries []string            `json:"add-registry,omitempty"`

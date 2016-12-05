@@ -39,6 +39,7 @@ Options:
       --dns=[]                               DNS server to use
       --dns-opt=[]                           DNS options to use
       --dns-search=[]                        DNS search domains to use
+      --enable-secrets=true                  Enable Secrets
       --exec-opt=[]                          Runtime execution options
       --exec-root=/var/run/docker            Root directory for execution state files
       --fixed-cidr                           IPv4 subnet for fixed IPs
@@ -1020,6 +1021,7 @@ This is a full example of the allowed configuration options on Linux:
 	"dns": [],
 	"dns-opts": [],
 	"dns-search": [],
+	"enable-secrets": true,
 	"exec-opts": [],
 	"exec-root": "",
 	"storage-driver": "",
