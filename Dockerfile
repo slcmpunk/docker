@@ -288,7 +288,7 @@ RUN set -x \
 	&& rm -rf "$GOPATH"
 
 # Install skopeo
-ENV SKOPEO_COMMIT v0.1.18
+ENV SKOPEO_COMMIT v0.1.17
 RUN set -x \
 	&& export GOPATH="$(mktemp -d)" \
 	&& git clone https://github.com/projectatomic/skopeo.git "$GOPATH/src/github.com/projectatomic/skopeo" \
