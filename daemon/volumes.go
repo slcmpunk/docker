@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/volume"
 	"github.com/docker/engine-api/types"
 	containertypes "github.com/docker/engine-api/types/container"
+	"github.com/opencontainers/runc/libcontainer/label"
 )
 
 var (
@@ -147,6 +148,11 @@ func (daemon *Daemon) registerMountPoints(container *container.Container, hostCo
 			bind.Named = true
 			if bind.Driver == "local" {
 				bind = setBindModeIfNull(bind)
+			}
+			if label.RelabelNeeded(bind.Mode) {
+				if err := label.Relabel(bind.Source, container.MountLabel, label.IsShared(bind.Mode)); err != nil {
+					return err
+				}
 			}
 		}
 
