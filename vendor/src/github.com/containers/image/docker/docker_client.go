@@ -259,15 +259,26 @@ func (c *dockerClient) setupRequestAuth(req *http.Request) error {
 		// Do not use the body stream, or we couldn't reuse it for the "real" call later.
 		testReq.Body = nil
 		testReq.ContentLength = 0
-		testReq.SetBasicAuth(c.username, c.password)
 		res, err := c.client.Do(&testReq)
 		if err != nil {
 			return err
 		}
 		chs := parseAuthHeader(res.Header)
 		if res.StatusCode != http.StatusUnauthorized || chs == nil || len(chs) == 0 {
-			// no need for bearer? wtf?
-			return nil
+			testReq2 := *req
+			// Do not use the body stream, or we couldn't reuse it for the "real" call later.
+			testReq2.Body = nil
+			testReq2.ContentLength = 0
+			testReq2.SetBasicAuth(c.username, c.password)
+			res, err := c.client.Do(&testReq2)
+			if err != nil {
+				return err
+			}
+			chs = parseAuthHeader(res.Header)
+			if res.StatusCode != http.StatusUnauthorized || chs == nil || len(chs) == 0 {
+				// no need for bearer? wtf?
+				return nil
+			}
 		}
 		// Arbitrarily use the first challenge, there is no reason to expect more than one.
 		challenge := chs[0]
