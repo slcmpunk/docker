@@ -259,6 +259,7 @@ func (c *dockerClient) setupRequestAuth(req *http.Request) error {
 		// Do not use the body stream, or we couldn't reuse it for the "real" call later.
 		testReq.Body = nil
 		testReq.ContentLength = 0
+		testReq.SetBasicAuth(c.username, c.password)
 		res, err := c.client.Do(&testReq)
 		if err != nil {
 			return err
