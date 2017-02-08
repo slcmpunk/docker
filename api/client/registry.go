@@ -98,7 +98,7 @@ func (cli *DockerCli) promptWithDefault(prompt string, configDefault string) {
 func (cli *DockerCli) ResolveAuthConfig(ctx context.Context, index *registrytypes.IndexInfo) types.AuthConfig {
 	configKey := index.Name
 	if index.Official {
-		configKey = cli.ElectAuthServer(ctx)
+		configKey = registry.IndexServer
 	}
 
 	a, _ := GetCredentials(cli.configFile, configKey)
