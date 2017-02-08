@@ -57,6 +57,7 @@ dockerd - Enable daemon mode
 [**--registry-mirror**[=*[]*]]
 [**-s**|**--storage-driver**[=*STORAGE-DRIVER*]]
 [**--selinux-enabled**]
+[**--signature-verification**]
 [**--storage-opt**[=*[]*]]
 [**--swarm-default-advertise-addr**[=*IP|INTERFACE*]]
 [**--tls**]
@@ -249,6 +250,10 @@ output otherwise.
 **--selinux-enabled**=*true*|*false*
   Enable selinux support. Default is false.
 
+**--signature-verification**=*true*|*false*
+  Enable image signature verification. Default is true. WARNING: this option doesn't work
+  with images being pulled from v1 docker registries. See SIGNATURE VERIFICATION.
+
 **--storage-opt**=[]
   Set storage driver options. See STORAGE DRIVER OPTIONS.
 
@@ -278,6 +283,15 @@ output otherwise.
 
 **--userns-remap**=*default*|*uid:gid*|*user:group*|*user*|*uid*
     Enable user namespaces for containers on the daemon. Specifying "default" will cause a new user and group to be created to handle UID and GID range remapping for the user namespace mappings used for contained processes. Specifying a user (or uid) and optionally a group (or gid) will cause the daemon to lookup the user and group's subordinate ID ranges for use as the user namespace mappings for contained processes.
+
+# SIGNATURE VERIFICATION
+
+Docker supports GPG image signatures verification when **--signature-verification**
+flag is *true*.
+This functionality works only at pull time and for images being pulled from docker
+registries version 2.
+You can sign an image using skopeo(1) or atomic(1).
+See https://access.redhat.com/articles/2750891.
 
 # STORAGE DRIVER OPTIONS
 
