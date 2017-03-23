@@ -9,7 +9,6 @@ import (
 	"github.com/docker/docker/api/client"
 	"github.com/docker/docker/cli"
 	"github.com/docker/docker/dockerversion"
-	"github.com/docker/docker/pkg/rpm"
 	"github.com/docker/docker/utils"
 	"github.com/docker/docker/utils/templates"
 	"github.com/docker/engine-api/types"
@@ -73,7 +72,6 @@ func runVersion(dockerCli *client.DockerCli, opts *versionOptions) error {
 		return cli.StatusError{StatusCode: 64,
 			Status: "Template parsing error: " + err.Error()}
 	}
-	packageVersion, _ := rpm.Version("/usr/bin/docker")
 
 	vd := types.VersionResponse{
 		Client: &types.Version{
@@ -85,7 +83,7 @@ func runVersion(dockerCli *client.DockerCli, opts *versionOptions) error {
 			Os:           runtime.GOOS,
 			Arch:         runtime.GOARCH,
 			Experimental: utils.ExperimentalBuild(),
-			PkgVersion:   packageVersion,
+			PkgVersion:   "<unknown>",
 		},
 	}
 
