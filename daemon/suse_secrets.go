@@ -178,27 +178,40 @@ func readFile(prefix, file string) ([]*SuseFakeFile, error) {
 func getHostSuseSecretData() ([]*SuseFakeFile, error) {
 	secrets := []*SuseFakeFile{}
 
-	credentials, err := readDir("/usr/share/rhel", "secrets")
-	if err != nil {
-		if os.IsNotExist(err) {
-			credentials = []*SuseFakeFile{}
-		} else {
-			logrus.Errorf("SUSE:secrets :: error while reading zypp credentials: %s", err)
-			return nil, err
-		}
-	}
-	secrets = append(secrets, credentials...)
+	for _, p := range []string{
+		"/usr/share/rhel/secrets",
+		"/etc/container/rhel/secrets",
+	} {
+		prefix := p
+		dir := ""
+		path := filepath.Join(prefix, dir)
 
-	overrides, err := readDir("/etc/container/rhel", "secrets")
-	if err != nil {
-		if os.IsNotExist(err) {
-			credentials = []*SuseFakeFile{}
-		} else {
-			logrus.Errorf("SUSE:secrets :: error while reading zypp credentials: %s", err)
+		files, err := ioutil.ReadDir(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
 			return nil, err
 		}
+
+		for _, f := range files {
+			subpath := filepath.Join(dir, f.Name())
+
+			if f.IsDir() {
+				s, err := readDir(prefix, subpath)
+				if err != nil {
+					return nil, err
+				}
+				secrets = append(secrets, s...)
+			} else {
+				s, err := readFile(prefix, subpath)
+				if err != nil {
+					return nil, err
+				}
+				secrets = append(secrets, s...)
+			}
+		}
 	}
-	secrets = append(secrets, overrides...)
 
 	return secrets, nil
 }
