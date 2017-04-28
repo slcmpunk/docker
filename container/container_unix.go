@@ -457,5 +457,6 @@ func (container *Container) SecretMount(rootUID, rootGID int) (*Mount, error) {
 	m.Source = secretsPath
 	m.Destination = "/run/secrets"
 	m.Writable = true
+	m.Propagation = "rprivate"
 	return m, nil
 }
