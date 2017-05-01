@@ -34,7 +34,7 @@ type client struct {
 // AddProcess is the handler for adding a process to an already running
 // container. It's called through docker exec. It returns the system pid of the
 // exec'd process.
-func (clnt *client) AddProcess(ctx context.Context, containerID, processFriendlyName string, specp Process, attachStdio StdioCallback) error {
+func (clnt *client) AddProcess(ctx context.Context, containerID, processFriendlyName string, specp Process, attachStdio StdioCallback) (err error) {
 	clnt.lock(containerID)
 	defer clnt.unlock(containerID)
 	container, err := clnt.getContainer(containerID)
@@ -90,7 +90,14 @@ func (clnt *client) AddProcess(ctx context.Context, containerID, processFriendly
 		Rlimits:         convertRlimits(sp.Rlimits),
 	}
 
-	iopipe, err := p.openFifos(sp.Terminal)
+	fifoCtx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		if err != nil {
+			cancel()
+		}
+	}()
+
+	iopipe, err := p.openFifos(fifoCtx, sp.Terminal)
 	if err != nil {
 		return err
 	}
@@ -433,7 +440,14 @@ func (clnt *client) restore(cont *containerd.Container, lastEvent *containerd.Ev
 		}
 	}
 
-	iopipe, err := container.openFifos(terminal)
+	fifoCtx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		if err != nil {
+			cancel()
+		}
+	}()
+
+	iopipe, err := container.openFifos(fifoCtx, terminal)
 	if err != nil {
 		return err
 	}
