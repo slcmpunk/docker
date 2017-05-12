@@ -47,7 +47,7 @@ func NewSearchCommand(dockerCli *client.DockerCli) *cobra.Command {
 	flags := cmd.Flags()
 
 	flags.BoolVar(&opts.noTrunc, "no-trunc", false, "Don't truncate output")
-	flags.BoolVar(&opts.noTrunc, "no-index", false, "Don't truncate output")
+	flags.BoolVar(&opts.noIndex, "no-index", false, "Don't truncate output")
 	flags.StringSliceVarP(&opts.filter, "filter", "f", []string{}, "Filter output based on conditions provided")
 	flags.IntVar(&opts.limit, "limit", registry.DefaultSearchLimit, "Max number of search results")
 
