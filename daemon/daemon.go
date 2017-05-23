@@ -26,6 +26,7 @@ import (
 	"github.com/docker/docker/container"
 	"github.com/docker/docker/daemon/events"
 	"github.com/docker/docker/daemon/exec"
+	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/engine-api/types"
 	containertypes "github.com/docker/engine-api/types/container"
 	"github.com/docker/libnetwork/cluster"
@@ -478,6 +479,9 @@ func NewDaemon(config *Config, registryService registry.Service, containerdRemot
 	if err := idtools.MkdirAllAs(daemonRepo, 0700, rootUID, rootGID); err != nil && !os.IsExist(err) {
 		return nil, err
 	}
+	if err := mount.MakeRPrivate(daemonRepo); err != nil {
+		return nil, err
+	}
 
 	driverName := os.Getenv("DOCKER_DRIVER")
 	if driverName == "" {
@@ -695,6 +699,10 @@ func (daemon *Daemon) Shutdown() error {
 		if err := daemon.layerStore.Cleanup(); err != nil {
 			logrus.Errorf("Error during layer Store.Cleanup(): %v", err)
 		}
+	}
+
+	if err := mount.Unmount(daemon.repository); err != nil {
+		logrus.Errorf("Error umounting daemon repository: %v")
 	}
 
 	if err := daemon.cleanupMounts(); err != nil {
