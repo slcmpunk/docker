@@ -22,7 +22,9 @@ import (
 // Exec implements the exec driver Driver interface,
 // it calls libcontainer APIs to execute a container.
 func (d *Driver) Exec(c *execdriver.Command, processConfig *execdriver.ProcessConfig, pipes *execdriver.Pipes, hooks execdriver.Hooks) (int, error) {
+	d.Lock()
 	active := d.activeContainers[c.ID]
+	d.Unlock()
 	if active == nil {
 		return -1, fmt.Errorf("No active container exists with ID %s", c.ID)
 	}
