@@ -217,9 +217,13 @@ func (d *Daemon) ContainerExecStart(ctx context.Context, name string, stdin io.R
 	ec.StreamConfig.AttachStreams(&attachConfig)
 	attachErr := ec.StreamConfig.CopyStreams(ctx, &attachConfig)
 
-	if err := d.containerd.AddProcess(ctx, c.ID, name, p, ec.InitializeStdio); err != nil {
+	systemPid, err := d.containerd.AddProcess(ctx, c.ID, name, p, ec.InitializeStdio)
+	if err != nil {
 		return err
 	}
+	ec.Lock()
+	ec.Pid = systemPid
+	ec.Unlock()
 
 	select {
 	case <-ctx.Done():

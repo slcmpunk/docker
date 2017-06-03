@@ -55,6 +55,7 @@ type ExecInspect struct {
 	CanRemove     bool
 	ContainerID   string
 	DetachKeys    []byte
+	Pid           int
 }
 
 // ExecProcessConfig holds information about the exec process

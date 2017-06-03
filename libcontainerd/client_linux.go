@@ -34,17 +34,17 @@ type client struct {
 // AddProcess is the handler for adding a process to an already running
 // container. It's called through docker exec. It returns the system pid of the
 // exec'd process.
-func (clnt *client) AddProcess(ctx context.Context, containerID, processFriendlyName string, specp Process, attachStdio StdioCallback) (err error) {
+func (clnt *client) AddProcess(ctx context.Context, containerID, processFriendlyName string, specp Process, attachStdio StdioCallback) (pid int, err error) {
 	clnt.lock(containerID)
 	defer clnt.unlock(containerID)
 	container, err := clnt.getContainer(containerID)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	spec, err := container.spec()
 	if err != nil {
-		return err
+		return -1, err
 	}
 	sp := spec.Process
 	sp.Args = specp.Args
@@ -99,12 +99,13 @@ func (clnt *client) AddProcess(ctx context.Context, containerID, processFriendly
 
 	iopipe, err := p.openFifos(fifoCtx, sp.Terminal)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
-	if _, err := clnt.remote.apiClient.AddProcess(ctx, r); err != nil {
+	resp, err := clnt.remote.apiClient.AddProcess(ctx, r)
+	if err != nil {
 		p.closeFifos(iopipe)
-		return err
+		return -1, err
 	}
 
 	var stdinOnce sync.Once
@@ -124,10 +125,11 @@ func (clnt *client) AddProcess(ctx context.Context, containerID, processFriendly
 
 	if err := attachStdio(*iopipe); err != nil {
 		p.closeFifos(iopipe)
-		return err
+		return -1, err
 	}
 
-	return nil
+	pid = int(resp.SystemPid)
+	return pid, nil
 }
 
 func (clnt *client) prepareBundleDir(uid, gid int) (string, error) {
