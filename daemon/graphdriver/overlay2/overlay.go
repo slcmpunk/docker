@@ -28,6 +28,7 @@ import (
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/parsers"
+	"github.com/docker/docker/pkg/system"
 	"github.com/docker/go-units"
 	"github.com/opencontainers/runc/libcontainer/label"
 )
@@ -439,7 +440,7 @@ func (d *Driver) Remove(id string) error {
 		}
 	}
 
-	if err := os.RemoveAll(dir); err != nil && !os.IsNotExist(err) {
+	if err := system.EnsureRemoveAll(dir); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return nil
