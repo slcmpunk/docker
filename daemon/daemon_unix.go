@@ -42,6 +42,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/label"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/specs/specs-go"
+	"github.com/vishvananda/netlink"
 )
 
 const (
@@ -695,11 +696,19 @@ func (daemon *Daemon) initNetworkController(config *Config, activeSandboxes map[
 			return nil, fmt.Errorf("Error creating default \"host\" network: %v", err)
 		}
 	}
+	// Clear stale bridge network
+	if n, err := controller.NetworkByName("bridge"); err == nil {
+		if err = n.Delete(); err != nil {
+			return nil, fmt.Errorf("could not delete the default bridge network: %v", err)
+		}
+	}
 	if !config.DisableBridge {
 		// Initialize default driver "bridge"
 		if err := initBridgeDriver(controller, config); err != nil {
 			return nil, err
 		}
+	} else {
+		removeDefaultBridgeInterface()
 	}
 
 	return controller, nil
@@ -718,13 +727,16 @@ func driverOptions(config *Config) []nwconfig.Option {
 	return dOptions
 }
 
-func initBridgeDriver(controller libnetwork.NetworkController, config *Config) error {
-	if n, err := controller.NetworkByName("bridge"); err == nil {
-		if err = n.Delete(); err != nil {
-			return fmt.Errorf("could not delete the default bridge network: %v", err)
+// Remove default bridge interface if present (--bridge=none use case)
+func removeDefaultBridgeInterface() {
+	if lnk, err := netlink.LinkByName(bridge.DefaultBridgeName); err == nil {
+		if err := netlink.LinkDel(lnk); err != nil {
+			logrus.Warnf("Failed to remove bridge interface (%s): %v", bridge.DefaultBridgeName, err)
 		}
 	}
+}
 
+func initBridgeDriver(controller libnetwork.NetworkController, config *Config) error {
 	bridgeName := bridge.DefaultBridgeName
 	if config.bridgeConfig.Iface != "" {
 		bridgeName = config.bridgeConfig.Iface
