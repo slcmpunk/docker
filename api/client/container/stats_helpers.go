@@ -104,14 +104,7 @@ func (s *containerStats) Collect(ctx context.Context, cli client.APIClient, stre
 				continue
 			}
 
-			var memPercent = 0.0
 			var cpuPercent = 0.0
-
-			// MemoryStats.Limit will never be 0 unless the container is not running and we haven't
-			// got any data from cgroup
-			if v.MemoryStats.Limit != 0 {
-				memPercent = float64(v.MemoryStats.Usage) / float64(v.MemoryStats.Limit) * 100.0
-			}
 
 			previousCPU = v.PreCPUStats.CPUUsage.TotalUsage
 			previousSystem = v.PreCPUStats.SystemUsage
@@ -119,9 +112,9 @@ func (s *containerStats) Collect(ctx context.Context, cli client.APIClient, stre
 			blkRead, blkWrite := calculateBlockIO(v.BlkioStats)
 			s.mu.Lock()
 			s.CPUPercentage = cpuPercent
-			s.Memory = float64(v.MemoryStats.Usage)
+			s.Memory = calculateMemUsageUnixNoCache(v.MemoryStats)
 			s.MemoryLimit = float64(v.MemoryStats.Limit)
-			s.MemoryPercentage = memPercent
+			s.MemoryPercentage = calculateMemPercentUnixNoCache(s.MemoryLimit, s.Memory)
 			s.NetworkRx, s.NetworkTx = calculateNetwork(v.Networks)
 			s.BlockRead = float64(blkRead)
 			s.BlockWrite = float64(blkWrite)
@@ -235,4 +228,19 @@ func calculateNetwork(network map[string]types.NetworkStats) (float64, float64) 
 		tx += float64(v.TxBytes)
 	}
 	return rx, tx
+}
+
+// calculateMemUsageUnixNoCache calculate memory usage of the container.
+// Page cache is intentionally excluded to avoid misinterpretation of the output.
+func calculateMemUsageUnixNoCache(mem types.MemoryStats) float64 {
+	return float64(mem.Usage - mem.Stats["cache"])
+}
+
+func calculateMemPercentUnixNoCache(limit float64, usedNoCache float64) float64 {
+	// MemoryStats.Limit will never be 0 unless the container is not running and we haven't
+	// got any data from cgroup
+	if limit != 0 {
+		return usedNoCache / limit * 100.0
+	}
+	return 0
 }
