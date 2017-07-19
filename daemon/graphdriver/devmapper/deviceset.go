@@ -29,8 +29,8 @@ import (
 	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/parsers"
 	"github.com/docker/go-units"
-
 	"github.com/opencontainers/runc/libcontainer/label"
+	pkgerr "github.com/pkg/errors"
 )
 
 var (
@@ -2719,10 +2719,10 @@ func NewDeviceSet(root string, doInit bool, options []string, uidMaps, gidMaps [
 		case "dm.libdm_log_level":
 			level, err := strconv.ParseInt(val, 10, 32)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not parse `dm.libdm_log_level=%s`", val)
+				return nil, pkgerr.Wrapf(err, "could not parse `dm.libdm_log_level=%s`", val)
 			}
 			if level < devicemapper.LogLevelFatal || level > devicemapper.LogLevelDebug {
-				return nil, errors.Errorf("dm.libdm_log_level must be in range [%d,%d]", devicemapper.LogLevelFatal, devicemapper.LogLevelDebug)
+				return nil, pkgerr.Errorf("dm.libdm_log_level must be in range [%d,%d]", devicemapper.LogLevelFatal, devicemapper.LogLevelDebug)
 			}
 			// Register a new logging callback with the specified level.
 			devicemapper.LogInit(devicemapper.DefaultLogger{
