@@ -7283,3 +7283,31 @@ func (s *DockerRegistrySuite) TestBuildWithPublicRegistryBlocked(c *check.C) {
 func (s *DockerRegistrySuite) TestBuildWithAllRegistriesBlocked(c *check.C) {
 	s.doTestBuildWithPublicRegistryBlocked(c, "testbuildwithallregistriesblocked", []string{"--block-registry=all"})
 }
+
+func (s *DockerSuite) TestBuildNetNone(c *check.C) {
+	testRequires(c, DaemonIsLinux)
+
+	name := "testbuildnetnone"
+	_, out, err := buildImageWithOut(name, `
+  FROM busybox
+  RUN ping -c 1 8.8.8.8
+  `, true, "--network=none")
+	c.Assert(err, checker.NotNil)
+	c.Assert(out, checker.Contains, "unreachable")
+}
+
+func (s *DockerSuite) TestBuildNetContainer(c *check.C) {
+	testRequires(c, DaemonIsLinux)
+
+	id, _ := dockerCmd(c, "run", "--hostname", "foobar", "-d", "busybox", "nc", "-ll", "-p", "1234", "-e", "hostname")
+
+	name := "testbuildnetcontainer"
+	out, err := buildImage(name, `
+  FROM busybox
+  RUN nc localhost 1234 > /otherhost
+  `, true, "--network=container:"+strings.TrimSpace(id))
+	c.Assert(err, checker.IsNil, check.Commentf("out: %v", out))
+
+	host, _ := dockerCmd(c, "run", "testbuildnetcontainer", "cat", "/otherhost")
+	c.Assert(strings.TrimSpace(host), check.Equals, "foobar")
+}

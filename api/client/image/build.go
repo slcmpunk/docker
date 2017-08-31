@@ -56,6 +56,7 @@ type buildOptions struct {
 	rm             bool
 	forceRm        bool
 	pull           bool
+	networkMode    string
 }
 
 // NewBuildCommand creates a new `docker build` command
@@ -101,6 +102,7 @@ func NewBuildCommand(dockerCli *client.DockerCli) *cobra.Command {
 	flags.BoolVar(&options.forceRm, "force-rm", false, "Always remove intermediate containers")
 	flags.BoolVarP(&options.quiet, "quiet", "q", false, "Suppress the build output and print image ID on success")
 	flags.BoolVar(&options.pull, "pull", false, "Always attempt to pull a newer version of the image")
+	flags.StringVar(&options.networkMode, "network", "default", "Connect a container to a network")
 
 	flags.VarP(&options.buildVolumes, "volume", "v", "Set build-time bind mounts")
 
