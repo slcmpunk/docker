@@ -339,7 +339,7 @@ func (daemon *Daemon) updateContainerNetworkSettings(container *container.Contai
 	)
 
 	mode := container.HostConfig.NetworkMode
-	if container.Config.NetworkDisabled || mode.IsContainer() {
+	if container.Config.NetworkDisabled || mode.IsContainer() || mode.IsNetNs() {
 		return nil
 	}
 
@@ -397,7 +397,7 @@ func (daemon *Daemon) allocateNetwork(container *container.Container) error {
 
 	updateSettings := false
 	if len(container.NetworkSettings.Networks) == 0 {
-		if container.Config.NetworkDisabled || container.HostConfig.NetworkMode.IsContainer() {
+		if container.Config.NetworkDisabled || container.HostConfig.NetworkMode.IsContainer() || container.HostConfig.NetworkMode.IsNetNs() {
 			return nil
 		}
 
@@ -729,7 +729,7 @@ func (daemon *Daemon) releaseNetwork(container *container.Container) {
 	if daemon.netController == nil {
 		return
 	}
-	if container.HostConfig.NetworkMode.IsContainer() || container.Config.NetworkDisabled {
+	if container.HostConfig.NetworkMode.IsContainer() || container.HostConfig.NetworkMode.IsNetNs() || container.Config.NetworkDisabled {
 		return
 	}
 

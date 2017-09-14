@@ -53,6 +53,12 @@ func (n NetworkMode) IsContainer() bool {
 	return len(parts) > 1 && parts[0] == "container"
 }
 
+// IsNetNs indicates whether container uses a container network namespace path.
+func (n NetworkMode) IsNetNs() bool {
+	parts := strings.SplitN(string(n), ":", 2)
+	return len(parts) > 1 && parts[0] == "netns"
+}
+
 // IsNone indicates whether container isn't using a network stack.
 func (n NetworkMode) IsNone() bool {
 	return n == "none"
