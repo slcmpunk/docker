@@ -160,13 +160,19 @@ func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		uidMaps: uidMaps,
 		gidMaps: gidMaps,
 		ctr:     graphdriver.NewRefCounter(graphdriver.NewFsChecker(graphdriver.FsMagicOverlay)),
+		options: *opts,
 	}
 
 	if backingFs == "xfs" {
 		// Try to enable project quota support over xfs.
 		if d.quotaCtl, err = graphdriver.NewQuotaCtl(home); err == nil {
 			projectQuotaSupported = true
+		} else if opts.quota.Size > 0 {
+			return nil, fmt.Errorf("Storage option overlay2.size not supported. Filesystem does not support Project Quota: %v", err)
 		}
+	} else if opts.quota.Size > 0 {
+		// if xfs is not the backing fs then error out if the storage-opt overlay2.size is used.
+		return nil, fmt.Errorf("Storage Option overlay2.size only supported for backingFS XFS. Found %v", backingFs)
 	}
 
 	logrus.Debugf("backingFs=%s,  projectQuotaSupported=%v", backingFs, projectQuotaSupported)
@@ -188,9 +194,14 @@ func parseOptions(options []string) (*overlayOptions, error) {
 			if err != nil {
 				return nil, err
 			}
-
+		case "overlay2.size":
+			size, err := units.RAMInBytes(val)
+			if err != nil {
+				return nil, err
+			}
+			o.quota.Size = uint64(size)
 		default:
-			return nil, fmt.Errorf("overlay2: Unknown option %s\n", key)
+			return nil, fmt.Errorf("overlay2: unknown option %s", key)
 		}
 	}
 	return o, nil
@@ -270,10 +281,21 @@ func (d *Driver) CreateReadWrite(id, parent, mountLabel string, storageOpt map[s
 // Create is used to create the upper, lower, and merge directories required for overlay fs for a given id.
 // The parent filesystem is used to configure these directories for the overlay.
 func (d *Driver) Create(id, parent, mountLabel string, storageOpt map[string]string) (retErr error) {
-
 	if len(storageOpt) != 0 && !projectQuotaSupported {
 		return fmt.Errorf("--storage-opt is supported only for overlay over xfs with 'pquota' mount option")
 	}
+
+	if storageOpt == nil {
+		storageOpt = map[string]string{}
+	}
+
+	if _, ok := storageOpt["size"]; !ok {
+		storageOpt["size"] = strconv.FormatUint(d.options.quota.Size, 10)
+	}
+	return d.create(id, parent, storageOpt)
+}
+
+func (d *Driver) create(id, parent string, storageOpt map[string]string) (retErr error) {
 
 	dir := d.dir(id)
 
