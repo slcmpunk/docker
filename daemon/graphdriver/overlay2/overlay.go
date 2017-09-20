@@ -24,6 +24,7 @@ import (
 	"github.com/docker/docker/pkg/parsers"
 	"github.com/docker/docker/pkg/parsers/kernel"
 	"github.com/docker/docker/pkg/system"
+	"github.com/docker/go-units"
 	"github.com/opencontainers/runc/libcontainer/label"
 )
 
@@ -75,15 +76,25 @@ const (
 	idLength = 26
 )
 
-// Driver contains information about the home directory and the list of active mounts that are created using this driver.
-type Driver struct {
-	home    string
-	uidMaps []idtools.IDMap
-	gidMaps []idtools.IDMap
-	ctr     *graphdriver.RefCounter
+type overlayOptions struct {
+	overrideKernelCheck bool
+	quota               graphdriver.Quota
 }
 
-var backingFs = "<unknown>"
+// Driver contains information about the home directory and the list of active mounts that are created using this driver.
+type Driver struct {
+	home     string
+	uidMaps  []idtools.IDMap
+	gidMaps  []idtools.IDMap
+	ctr      *graphdriver.RefCounter
+	quotaCtl *graphdriver.QuotaCtl
+	options  overlayOptions
+}
+
+var (
+	backingFs             = "<unknown>"
+	projectQuotaSupported = false
+)
 
 func init() {
 	graphdriver.Register(driverName, Init)
@@ -149,13 +160,24 @@ func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		uidMaps: uidMaps,
 		gidMaps: gidMaps,
 		ctr:     graphdriver.NewRefCounter(graphdriver.NewFsChecker(graphdriver.FsMagicOverlay)),
+		options: *opts,
 	}
 
-	return d, nil
-}
+	if backingFs == "xfs" {
+		// Try to enable project quota support over xfs.
+		if d.quotaCtl, err = graphdriver.NewQuotaCtl(home); err == nil {
+			projectQuotaSupported = true
+		} else if opts.quota.Size > 0 {
+			return nil, fmt.Errorf("Storage option overlay2.size not supported. Filesystem does not support Project Quota: %v", err)
+		}
+	} else if opts.quota.Size > 0 {
+		// if xfs is not the backing fs then error out if the storage-opt overlay2.size is used.
+		return nil, fmt.Errorf("Storage Option overlay2.size only supported for backingFS XFS. Found %v", backingFs)
+	}
 
-type overlayOptions struct {
-	overrideKernelCheck bool
+	logrus.Debugf("backingFs=%s,  projectQuotaSupported=%v", backingFs, projectQuotaSupported)
+
+	return d, nil
 }
 
 func parseOptions(options []string) (*overlayOptions, error) {
@@ -172,8 +194,14 @@ func parseOptions(options []string) (*overlayOptions, error) {
 			if err != nil {
 				return nil, err
 			}
+		case "overlay2.size":
+			size, err := units.RAMInBytes(val)
+			if err != nil {
+				return nil, err
+			}
+			o.quota.Size = uint64(size)
 		default:
-			return nil, fmt.Errorf("overlay2: Unknown option %s\n", key)
+			return nil, fmt.Errorf("overlay2: unknown option %s", key)
 		}
 	}
 	return o, nil
@@ -253,10 +281,21 @@ func (d *Driver) CreateReadWrite(id, parent, mountLabel string, storageOpt map[s
 // Create is used to create the upper, lower, and merge directories required for overlay fs for a given id.
 // The parent filesystem is used to configure these directories for the overlay.
 func (d *Driver) Create(id, parent, mountLabel string, storageOpt map[string]string) (retErr error) {
-
-	if len(storageOpt) != 0 {
-		return fmt.Errorf("--storage-opt is not supported for overlay")
+	if len(storageOpt) != 0 && !projectQuotaSupported {
+		return fmt.Errorf("--storage-opt is supported only for overlay over xfs with 'pquota' mount option")
 	}
+
+	if storageOpt == nil {
+		storageOpt = map[string]string{}
+	}
+
+	if _, ok := storageOpt["size"]; !ok {
+		storageOpt["size"] = strconv.FormatUint(d.options.quota.Size, 10)
+	}
+	return d.create(id, parent, storageOpt)
+}
+
+func (d *Driver) create(id, parent string, storageOpt map[string]string) (retErr error) {
 
 	dir := d.dir(id)
 
@@ -277,6 +316,20 @@ func (d *Driver) Create(id, parent, mountLabel string, storageOpt map[string]str
 			os.RemoveAll(dir)
 		}
 	}()
+
+	if len(storageOpt) > 0 {
+		driver := &Driver{}
+		if err := d.parseStorageOpt(storageOpt, driver); err != nil {
+			return err
+		}
+
+		if driver.options.quota.Size > 0 {
+			// Set container disk quota limit
+			if err := d.quotaCtl.SetQuota(dir, driver.options.quota); err != nil {
+				return err
+			}
+		}
+	}
 
 	if err := idtools.MkdirAs(path.Join(dir, "diff"), 0755, rootUID, rootGID); err != nil {
 		return err
@@ -311,6 +364,26 @@ func (d *Driver) Create(id, parent, mountLabel string, storageOpt map[string]str
 	if lower != "" {
 		if err := ioutil.WriteFile(path.Join(dir, lowerFile), []byte(lower), 0666); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+// Parse overlay storage options
+func (d *Driver) parseStorageOpt(storageOpt map[string]string, driver *Driver) error {
+	// Read size to set the disk project quota per container
+	for key, val := range storageOpt {
+		key := strings.ToLower(key)
+		switch key {
+		case "size":
+			size, err := units.RAMInBytes(val)
+			if err != nil {
+				return err
+			}
+			driver.options.quota.Size = uint64(size)
+		default:
+			return fmt.Errorf("Unknown option %s", key)
 		}
 	}
 
@@ -440,7 +513,7 @@ func (d *Driver) Put(id string) error {
 	if count := d.ctr.Decrement(mountpoint); count > 0 {
 		return nil
 	}
-	if err := syscall.Unmount(mountpoint, 0); err != nil {
+	if err := syscall.Unmount(mountpoint, syscall.MNT_DETACH); err != nil {
 		logrus.Debugf("Failed to unmount %s overlay: %v", id, err)
 	}
 	return nil
