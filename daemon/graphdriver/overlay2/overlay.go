@@ -84,12 +84,13 @@ type overlayOptions struct {
 
 // Driver contains information about the home directory and the list of active mounts that are created using this driver.
 type Driver struct {
-	home     string
-	uidMaps  []idtools.IDMap
-	gidMaps  []idtools.IDMap
-	ctr      *graphdriver.RefCounter
-	quotaCtl *graphdriver.QuotaCtl
-	options  overlayOptions
+	home      string
+	uidMaps   []idtools.IDMap
+	gidMaps   []idtools.IDMap
+	ctr       *graphdriver.RefCounter
+	quotaCtl  *graphdriver.QuotaCtl
+	options   overlayOptions
+	naiveDiff graphdriver.Driver
 }
 
 var (
@@ -181,6 +182,7 @@ func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 
 	logrus.Debugf("backingFs=%s,  projectQuotaSupported=%v", backingFs, projectQuotaSupported)
 
+	d.naiveDiff = graphdriver.NewNaiveDiffDriver(d, uidMaps, gidMaps)
 	return d, nil
 }
 
