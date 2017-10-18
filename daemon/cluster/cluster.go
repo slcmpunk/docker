@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"crypto/x509"
 	"encoding/json"
 	stdliberrors "errors"
 	"fmt"
@@ -27,6 +28,7 @@ import (
 	types "github.com/docker/engine-api/types/swarm"
 	swarmagent "github.com/docker/swarmkit/agent"
 	swarmapi "github.com/docker/swarmkit/api"
+	pkgerrors "github.com/pkg/errors"
 	"golang.org/x/net/context"
 )
 
@@ -53,6 +55,9 @@ var ErrPendingSwarmExists = fmt.Errorf("This node is processing an existing join
 
 // ErrSwarmJoinTimeoutReached is returned when cluster join could not complete before timeout was reached.
 var ErrSwarmJoinTimeoutReached = fmt.Errorf("Timeout was reached before node was joined. The attempt to join the swarm will continue in the background. Use the \"docker info\" command to see the current swarm status of your node.")
+
+// ErrSwarmCertificatesExipred is returned if docker was not started for the whole validity period and they had no chance to renew automatically.
+var ErrSwarmCertificatesExpired = pkgerrors.New("Swarm certificates have expired. To replace them, leave the swarm and join again.")
 
 // defaultSpec contains some sane defaults if cluster options are missing on init
 var defaultSpec = types.Spec{
@@ -163,6 +168,10 @@ func New(config Config) (*Cluster, error) {
 		logrus.Errorf("swarm component could not be started before timeout was reached")
 	case <-n.Ready():
 	case <-n.done:
+		if err, ok := pkgerrors.Cause(c.err).(x509.CertificateInvalidError); ok && err.Reason == x509.Expired {
+			c.err = ErrSwarmCertificatesExpired
+			return c, nil
+		}
 		return nil, fmt.Errorf("swarm component could not be started: %v", c.err)
 	}
 	go c.reconnectOnFailure(n)
@@ -517,41 +526,46 @@ func (c *Cluster) Leave(force bool) error {
 	c.Lock()
 	node := c.node
 	if node == nil {
-		c.Unlock()
-		return ErrNoSwarm
-	}
-
-	if node.Manager() != nil && !force {
-		msg := "You are attempting to leave the swarm on a node that is participating as a manager. "
-		if c.isActiveManager() {
-			active, reachable, unreachable, err := c.managerStats()
-			if err == nil {
-				if active && reachable-2 <= unreachable {
-					if reachable == 1 && unreachable == 0 {
-						msg += "Removing the last manager erases all current state of the swarm. Use `--force` to ignore this message. "
-						c.Unlock()
-						return fmt.Errorf(msg)
-					}
-					msg += fmt.Sprintf("Removing this node leaves %v managers out of %v. Without a Raft quorum your swarm will be inaccessible. ", reachable-1, reachable+unreachable)
-				}
-			}
+		if c.err == ErrSwarmCertificatesExpired {
+			c.err = nil
+			c.Unlock()
 		} else {
-			msg += "Doing so may lose the consensus of your cluster. "
+			c.Unlock()
+			return ErrNoSwarm
 		}
+	} else {
+		if node.Manager() != nil && !force {
+			msg := "You are attempting to leave the swarm on a node that is participating as a manager. "
+			if c.isActiveManager() {
+				active, reachable, unreachable, err := c.managerStats()
+				if err == nil {
+					if active && reachable-2 <= unreachable {
+						if reachable == 1 && unreachable == 0 {
+							msg += "Removing the last manager erases all current state of the swarm. Use `--force` to ignore this message. "
+							c.Unlock()
+							return fmt.Errorf(msg)
+						}
+						msg += fmt.Sprintf("Removing this node leaves %v managers out of %v. Without a Raft quorum your swarm will be inaccessible. ", reachable-1, reachable+unreachable)
+					}
+				}
+			} else {
+				msg += "Doing so may lose the consensus of your cluster. "
+			}
 
-		msg += "The only way to restore a swarm that has lost consensus is to reinitialize it with `--force-new-cluster`. Use `--force` to suppress this message."
+			msg += "The only way to restore a swarm that has lost consensus is to reinitialize it with `--force-new-cluster`. Use `--force` to suppress this message."
+			c.Unlock()
+			return fmt.Errorf(msg)
+		}
+		if err := c.stopNode(); err != nil {
+			c.Unlock()
+			return err
+		}
 		c.Unlock()
-		return fmt.Errorf(msg)
-	}
-	if err := c.stopNode(); err != nil {
-		c.Unlock()
-		return err
-	}
-	c.Unlock()
-	if nodeID := node.NodeID(); nodeID != "" {
-		for _, id := range c.config.Backend.ListContainersForNode(nodeID) {
-			if err := c.config.Backend.ContainerRm(id, &apitypes.ContainerRmConfig{ForceRemove: true}); err != nil {
-				logrus.Errorf("error removing %v: %v", id, err)
+		if nodeID := node.NodeID(); nodeID != "" {
+			for _, id := range c.config.Backend.ListContainersForNode(nodeID) {
+				if err := c.config.Backend.ContainerRm(id, &apitypes.ContainerRmConfig{ForceRemove: true}); err != nil {
+					logrus.Errorf("error removing %v: %v", id, err)
+				}
 			}
 		}
 	}
@@ -724,6 +738,9 @@ func (c *Cluster) Info() types.Info {
 		if c.cancelDelay != nil {
 			info.LocalNodeState = types.LocalNodeStateError
 		}
+		if c.err == ErrSwarmCertificatesExpired {
+			info.LocalNodeState = types.LocalNodeStateError
+		}
 	} else {
 		info.LocalNodeState = types.LocalNodeStatePending
 		if c.ready == true {
@@ -776,6 +793,9 @@ func (c *Cluster) isActiveManager() bool {
 // Call with read lock.
 func (c *Cluster) errNoManager() error {
 	if c.node == nil {
+		if c.err == ErrSwarmCertificatesExpired {
+			return ErrSwarmCertificatesExpired
+		}
 		return fmt.Errorf("This node is not a swarm manager. Use \"docker swarm init\" or \"docker swarm join\" to connect this node to swarm and try again.")
 	}
 	if c.node.Manager() != nil {
