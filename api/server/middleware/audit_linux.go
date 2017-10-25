@@ -261,7 +261,7 @@ func logAction(w http.ResponseWriter, r *http.Request, d *daemon.Daemon) error {
 	// Log info messages at Debug Level
 	// Log messages that change state at Info level
 	switch action {
-	case "history", "events", "stats", "search", "json", "version", "images", "info":
+	case "start", "exec", "create", "remove", "history", "events", "stats", "search", "json", "version", "images", "info":
 		logrus.Debug(message)
 	default:
 		logrus.Info(message)
