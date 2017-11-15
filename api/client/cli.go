@@ -19,6 +19,8 @@ import (
 	"github.com/docker/engine-api/client"
 	"github.com/docker/go-connections/sockets"
 	"github.com/docker/go-connections/tlsconfig"
+	"github.com/docker/notary/passphrase"
+	pkgerrors "github.com/pkg/errors"
 )
 
 // DockerCli represents the docker command line client.
@@ -179,6 +181,24 @@ func NewDockerCli(in io.ReadCloser, out, err io.Writer, clientFlags *cliflags.Cl
 		cli.configFile = LoadDefaultConfigFile(err)
 
 		client, err := NewAPIClientFromFlags(clientFlags, cli.configFile)
+		if tlsconfig.IsErrEncryptedKey(err) {
+			var (
+				passwd string
+				giveup bool
+			)
+			passRetriever := passphrase.PromptRetrieverWithInOut(cli.In(), cli.Out(), nil)
+			for attempts := 0; tlsconfig.IsErrEncryptedKey(err); attempts++ {
+				// some code and comments borrowed from notary/trustmanager/keystore.go
+				passwd, giveup, err = passRetriever("private", "encrypted TLS private", false, attempts)
+				// Check if the passphrase retriever got an error or if it is telling us to give up
+				if giveup || err != nil {
+					return pkgerrors.Wrap(err, "private key is encrypted, but could not get passphrase")
+				}
+
+				clientFlags.Common.TLSOptions.Passphrase = passwd
+				client, err = NewAPIClientFromFlags(clientFlags, cli.configFile)
+			}
+		}
 		if err != nil {
 			return err
 		}
