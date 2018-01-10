@@ -150,8 +150,12 @@ func parseRequest(r *http.Request, d *daemon.Daemon) (string, *container.Contain
 	if d != nil {
 		c, err := d.GetContainer(containerID)
 		if err == nil {
+			if c == nil {
+				logrus.Debug("GetContainer returned nil container.")
+			}
 			return action, c
 		}
+		logrus.Debug("Unable to determine container.")
 	}
 	return action, nil
 }
@@ -279,12 +283,14 @@ func logAuditlog(c *container.Container, action string, username string, loginui
 	hostname := "?"
 	user := "?"
 	auid := "?"
+	ctr_id_short := "?"
 
 	if c != nil {
 		vm = c.Config.Image
 		vmPid = fmt.Sprint(c.State.Pid)
 		exe = c.Path
 		hostname = c.Config.Hostname
+		ctr_id_short = c.ID[0:12]
 	}
 
 	if username != "" {
@@ -304,6 +310,7 @@ func logAuditlog(c *container.Container, action string, username string, loginui
 		"auid":     auid,
 		"exe":      exe,
 		"hostname": hostname,
+		"ctr_id_short": ctr_id_short,
 	}
 
 	//Encoding is a function of libaudit that ensures

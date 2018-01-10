@@ -310,11 +310,11 @@ func (cli *DaemonCli) start() (err error) {
 		"graphdriver": d.GraphDriverName(),
 	}).Info("Docker daemon")
 
-	cli.initMiddlewares(api, serverConfig)
-	initRouter(api, d, c)
-
 	cli.d = d
 	cli.setupConfigReloadTrap()
+
+	cli.initMiddlewares(api, serverConfig)
+	initRouter(api, d, c)
 
 	// The serve API routine never exits unless an error occurs
 	// We need to start it as a goroutine and wait on it so
