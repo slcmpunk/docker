@@ -151,11 +151,11 @@ func parseRequest(r *http.Request, d *daemon.Daemon) (string, *container.Contain
 		c, err := d.GetContainer(containerID)
 		if err == nil {
 			if c == nil {
-				logrus.Debug("GetContainer returned nil container.")
+				logrus.Debug("GetContainer returned nil container for ", containerID)
 			}
 			return action, c
 		}
-		logrus.Debug("Unable to determine container.")
+		logrus.Debug("Unable to determine container for ", containerID)
 	}
 	return action, nil
 }
@@ -290,7 +290,9 @@ func logAuditlog(c *container.Container, action string, username string, loginui
 		vmPid = fmt.Sprint(c.State.Pid)
 		exe = c.Path
 		hostname = c.Config.Hostname
-		ctr_id_short = c.ID[0:12]
+		if len(c.ID) > 11 {
+			ctr_id_short = c.ID[0:12]
+		}
 	}
 
 	if username != "" {
