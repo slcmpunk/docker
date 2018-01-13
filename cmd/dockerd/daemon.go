@@ -311,10 +311,12 @@ func (cli *DaemonCli) start() (err error) {
 	}).Info("Docker daemon")
 
 	cli.d = d
-	cli.setupConfigReloadTrap()
 
+	// initMiddlewares needs cli.d to be populated. Dont change this init order.
 	cli.initMiddlewares(api, serverConfig)
 	initRouter(api, d, c)
+
+	cli.setupConfigReloadTrap()
 
 	// The serve API routine never exits unless an error occurs
 	// We need to start it as a goroutine and wait on it so
