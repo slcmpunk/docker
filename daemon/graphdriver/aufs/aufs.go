@@ -129,10 +129,6 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		return nil, err
 	}
 
-	if err := mountpk.MakePrivate(root); err != nil {
-		return nil, err
-	}
-
 	// Populate the dir structure
 	for _, p := range paths {
 		if err := idtools.MkdirAllAs(path.Join(root, p), 0700, rootUID, rootGID); err != nil {
@@ -590,7 +586,7 @@ func (a *Driver) Cleanup() error {
 			logrus.Debugf("aufs error unmounting %s: %s", m, err)
 		}
 	}
-	return mountpk.Unmount(a.root)
+	return mountpk.RecursiveUnmount(a.root)
 }
 
 func (a *Driver) aufsMount(ro []string, rw, target, mountLabel string) (err error) {

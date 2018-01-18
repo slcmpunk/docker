@@ -67,10 +67,6 @@ func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		return nil, err
 	}
 
-	if err := mount.MakePrivate(home); err != nil {
-		return nil, err
-	}
-
 	opt, err := parseOptions(options)
 	if err != nil {
 		return nil, err
@@ -157,7 +153,7 @@ func (d *Driver) Cleanup() error {
 		}
 	}
 
-	return mount.Unmount(d.home)
+	return mount.RecursiveUnmount(d.home)
 }
 
 func free(p *C.char) {
