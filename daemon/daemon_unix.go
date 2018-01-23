@@ -25,6 +25,7 @@ import (
 	"github.com/docker/docker/container"
 	"github.com/docker/docker/image"
 	"github.com/docker/docker/pkg/idtools"
+	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/parsers"
 	"github.com/docker/docker/pkg/parsers/kernel"
 	"github.com/docker/docker/pkg/sysinfo"
@@ -1082,6 +1083,12 @@ func setupDaemonRoot(config *Config, rootDir string, rootUID, rootGID int) error
 			if !idtools.CanAccess(dirPath, rootUID, rootGID) {
 				return fmt.Errorf("A subdirectory in your graphroot path (%s) restricts access to the remapped root uid/gid; please fix by allowing 'o+x' permissions on existing directories.", config.Root)
 			}
+		}
+	}
+
+	if err := ensureSharedOrSlave(config.Root); err != nil {
+		if err := mount.MakeShared(config.Root); err != nil {
+			logrus.WithError(err).WithField("dir", config.Root).Warn("Could not set daemon root propagation to shared, this is not generally critical but may cause some functionality to not work or fallback to less desirable behavior")
 		}
 	}
 	return nil
