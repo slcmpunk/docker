@@ -35,6 +35,72 @@ type sbState struct {
 	ExtDNS2 []extDNSEntry
 }
 
+type compat_1 struct {
+	ID         string
+	Cid        string
+	c          *controller
+	dbIndex    uint64
+	dbExists   bool
+	Eps        []epState
+	EpPriority map[string]int
+	// external servers have to be persisted so that on restart of a live-restore
+	// enabled daemon we get the external servers for the running containers.
+	// We have two versions of ExtDNS to support upgrade & downgrade of the daemon
+	// between >=1.14 and <1.14 versions.
+	ExtDNS []extDNSEntry
+}
+
+type compat_2 struct {
+	ID         string
+	Cid        string
+	c          *controller
+	dbIndex    uint64
+	dbExists   bool
+	Eps        []epState
+	EpPriority map[string]int
+	// external servers have to be persisted so that on restart of a live-restore
+	// enabled daemon we get the external servers for the running containers.
+	// We have two versions of ExtDNS to support upgrade & downgrade of the daemon
+	// between >=1.14 and <1.14 versions.
+	ExtDNS []string
+}
+
+func (sbs *sbState) UnmarshalJSON(b []byte) error {
+	compat := &compat_1{}
+	err := json.Unmarshal(b, compat)
+	if err == nil {
+		for _, v := range compat.ExtDNS {
+			sbs.ExtDNS = append(sbs.ExtDNS, v.IPStr)
+		}
+		sbs.ExtDNS2 = compat.ExtDNS
+		sbs.ID = compat.ID
+		sbs.Cid = compat.Cid
+		sbs.c = compat.c
+		sbs.dbIndex = compat.dbIndex
+		sbs.dbExists = compat.dbExists
+		sbs.Eps = compat.Eps
+		sbs.EpPriority = compat.EpPriority
+		return nil
+	}
+	compat2 := &compat_2{}
+	err = json.Unmarshal(b, compat2)
+	if err != nil {
+		return err
+	}
+	sbs.ExtDNS = compat2.ExtDNS
+	for _, v := range compat2.ExtDNS {
+		sbs.ExtDNS2 = append(sbs.ExtDNS2, extDNSEntry{IPStr: v})
+	}
+	sbs.ID = compat2.ID
+	sbs.Cid = compat2.Cid
+	sbs.c = compat2.c
+	sbs.dbIndex = compat2.dbIndex
+	sbs.dbExists = compat2.dbExists
+	sbs.Eps = compat2.Eps
+	sbs.EpPriority = compat2.EpPriority
+	return nil
+}
+
 func (sbs *sbState) Key() []string {
 	return []string{sandboxPrefix, sbs.ID}
 }
