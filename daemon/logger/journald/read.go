@@ -222,7 +222,12 @@ func (s *journald) drainJournal(logWatcher *logger.LogWatcher, config logger.Rea
 				logrus.Errorf(fmtstr, errstr, s.vars["CONTAINER_ID_FULL"])
 				// Attempt to rewind the last-read cursor to the
 				// entry that we last sent.
-				C.sd_journal_previous(j)
+				if status = C.sd_journal_previous(j); status < 0 {
+					cerrstr := C.strerror(C.int(-status))
+					errstr := C.GoString(cerrstr)
+					fmtstr := "error %q while attempting to rewind journal by 1 for container %q"
+					logrus.Errorf(fmtstr, errstr, s.vars["CONTAINER_ID_FULL"])
+				}
 				break
 			}
 		}
@@ -232,7 +237,12 @@ func (s *journald) drainJournal(logWatcher *logger.LogWatcher, config logger.Rea
 		if len(logWatcher.Msg) >= cap(logWatcher.Msg) {
 			// Attempt to rewind the last-read cursor to the entry
 			// that we last sent.
-			C.sd_journal_previous(j)
+			if status := C.sd_journal_previous(j); status < 0 {
+				cerrstr := C.strerror(C.int(-status))
+				errstr := C.GoString(cerrstr)
+				fmtstr := "error %q while attempting to rewind journal by 1 for container %q"
+				logrus.Errorf(fmtstr, errstr, s.vars["CONTAINER_ID_FULL"])
+			}
 			break
 		}
 		// Read and send the current message, if there is one to read.
@@ -243,7 +253,12 @@ func (s *journald) drainJournal(logWatcher *logger.LogWatcher, config logger.Rea
 				// Attempt to rewind the last-read
 				// cursor to the entry that we last
 				// sent.
-				C.sd_journal_previous(j)
+				if status := C.sd_journal_previous(j); status < 0 {
+					cerrstr := C.strerror(C.int(-status))
+					errstr := C.GoString(cerrstr)
+					fmtstr := "error %q while attempting to rewind journal by 1 for container %q"
+					logrus.Errorf(fmtstr, errstr, s.vars["CONTAINER_ID_FULL"])
+				}
 				break
 			}
 			// Set up the time and text of the entry.
