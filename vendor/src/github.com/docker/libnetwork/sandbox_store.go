@@ -75,9 +75,6 @@ func (sbs *sbState) UnmarshalJSON(b []byte) error {
 		sbs.ExtDNS2 = compat.ExtDNS
 		sbs.ID = compat.ID
 		sbs.Cid = compat.Cid
-		sbs.c = compat.c
-		sbs.dbIndex = compat.dbIndex
-		sbs.dbExists = compat.dbExists
 		sbs.Eps = compat.Eps
 		sbs.EpPriority = compat.EpPriority
 		return nil
@@ -93,9 +90,6 @@ func (sbs *sbState) UnmarshalJSON(b []byte) error {
 	}
 	sbs.ID = compat2.ID
 	sbs.Cid = compat2.Cid
-	sbs.c = compat2.c
-	sbs.dbIndex = compat2.dbIndex
-	sbs.dbExists = compat2.dbExists
 	sbs.Eps = compat2.Eps
 	sbs.EpPriority = compat2.EpPriority
 	return nil
