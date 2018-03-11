@@ -1877,6 +1877,7 @@ _docker_daemon() {
 		--add-runtime
 		--api-cors-header
 		--authorization-plugin
+                --bind-mount-prefix
 		--bip
 		--bridge -b
 		--cgroup-parent

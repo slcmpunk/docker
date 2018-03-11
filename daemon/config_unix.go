@@ -37,6 +37,7 @@ type Config struct {
 	InitPath             string                   `json:"init-path,omitempty"`
 	SeccompProfile       string                   `json:"seccomp-profile,omitempty"`
 	EnableSecrets        bool                     `json:"enable-secrets"`
+	BindMountPrefix      string                   `json:"bind-mount-prefix"`
 }
 
 // bridgeConfig stores all the bridge driver specific
@@ -91,6 +92,7 @@ func (config *Config) InstallFlags(flags *pflag.FlagSet) {
 	flags.Int64Var(&config.CPURealtimeRuntime, "cpu-rt-runtime", 0, "Limit the CPU real-time runtime in microseconds")
 	flags.StringVar(&config.SeccompProfile, "seccomp-profile", "", "Path to seccomp profile")
 	flags.BoolVar(&config.EnableSecrets, "enable-secrets", true, "Enable Secrets")
+	flags.StringVar(&config.BindMountPrefix, "bind-mount-prefix", "", "Specify a prefix to prepend to the source of a bind mount")
 
 	config.attachExperimentalFlags(flags)
 }
