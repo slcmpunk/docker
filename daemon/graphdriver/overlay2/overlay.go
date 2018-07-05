@@ -28,7 +28,6 @@ import (
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/parsers"
-	"github.com/docker/docker/pkg/parsers/kernel"
 	"github.com/docker/go-units"
 	"github.com/opencontainers/runc/libcontainer/label"
 )
@@ -114,10 +113,6 @@ func init() {
 // If overlay filesystem is not supported on the host, graphdriver.ErrNotSupported is returned as error.
 // If an overlay filesystem is not supported over an existing filesystem then error graphdriver.ErrIncompatibleFS is returned.
 func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (graphdriver.Driver, error) {
-	opts, err := parseOptions(options)
-	if err != nil {
-		return nil, err
-	}
 	if err := supportsOverlay(); err != nil {
 		return nil, graphdriver.ErrNotSupported
 	}
@@ -128,11 +123,6 @@ func Init(home string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 	}
 	if fsName, ok := graphdriver.FsNames[fsMagic]; ok {
 		backingFs = fsName
-	}
-
-	v, err := kernel.GetKernelVersion()
-	if err != nil {
-		return nil, err
 	}
 
 	// check if they are running over btrfs, aufs, zfs, overlay, or ecryptfs
