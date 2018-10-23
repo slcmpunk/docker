@@ -48,6 +48,13 @@ func MkdirAllNewAs(path string, mode os.FileMode, ownerUID, ownerGID int) error 
 	return mkdirAs(path, mode, ownerUID, ownerGID, true, false)
 }
 
+// MkdirAllAndChown creates a directory (include any along the path) and then modifies
+// ownership to the requested uid/gid.  If the directory already exists, this
+// function will still change ownership to the requested uid/gid pair.
+func MkdirAllAndChown(path string, mode os.FileMode, uid, gid int) error {
+	return mkdirAs(path, mode, uid, gid, true, true)
+}
+
 // MkdirAs creates a directory and then modifies ownership to the requested uid/gid.
 // If the directory already exists, this function still changes ownership
 func MkdirAs(path string, mode os.FileMode, ownerUID, ownerGID int) error {

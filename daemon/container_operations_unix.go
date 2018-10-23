@@ -141,7 +141,10 @@ func (daemon *Daemon) setupSecretDir(c *container.Container) (setupErr error) {
 		return nil
 	}
 
-	localMountPath := c.SecretMountPath()
+	localMountPath, err := c.SecretMountPath()
+	if err != nil {
+		return err
+	}
 	logrus.Debugf("secrets: setting up secret dir: %s", localMountPath)
 
 	defer func() {
@@ -278,4 +281,22 @@ func initializeNetworkingPaths(container *container.Container, nc *container.Con
 	container.HostnamePath = nc.HostnamePath
 	container.HostsPath = nc.HostsPath
 	container.ResolvConfPath = nc.ResolvConfPath
+}
+
+func (daemon *Daemon) setupContainerMountsRoot(c *container.Container) error {
+	// get the root mount path so we can make it unbindable
+	p, err := c.MountsResourcePath("")
+	if err != nil {
+		return err
+	}
+	rootUID, rootGID := daemon.GetRemappedUIDGID()
+	if err := idtools.MkdirAllAndChown(p, 0700, rootUID, rootGID); err != nil {
+		return err
+	}
+	if err := mount.MakeUnbindable(p); err != nil {
+		// Setting unbindable is a precaution and is not neccessary for correct operation.
+		// Do not error out if this fails.
+		logrus.WithError(err).WithField("resource", p).WithField("container", c.ID).Warn("Error setting container resource mounts to unbindable, this may cause mount leakages, preventing removal of this container.")
+	}
+	return nil
 }

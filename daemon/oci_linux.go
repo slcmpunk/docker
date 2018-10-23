@@ -710,6 +710,9 @@ func (daemon *Daemon) createSpec(c *container.Container) (*specs.Spec, error) {
 	if err := setSeccomp(daemon, &s, c); err != nil {
 		return nil, fmt.Errorf("linux seccomp: %v", err)
 	}
+	if err := daemon.setupContainerMountsRoot(c); err != nil {
+		return nil, err
+	}
 
 	if err := daemon.setupIpcDirs(c); err != nil {
 		return nil, err
@@ -732,7 +735,11 @@ func (daemon *Daemon) createSpec(c *container.Container) (*specs.Spec, error) {
 	}
 	ms = append(ms, tmpfsMounts...)
 
-	if m := c.SecretMount(); m != nil {
+	m, err := c.SecretMount()
+	if err != nil {
+		return nil, err
+	}
+	if m != nil {
 		ms = append(ms, *m)
 	}
 

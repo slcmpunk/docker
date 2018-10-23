@@ -13,6 +13,7 @@ import (
 	containertypes "github.com/docker/docker/api/types/container"
 	mounttypes "github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/pkg/chrootarchive"
+	"github.com/docker/docker/pkg/mount"
 	"github.com/docker/docker/pkg/stringid"
 	"github.com/docker/docker/pkg/symlink"
 	"github.com/docker/docker/pkg/system"
@@ -167,8 +168,8 @@ func (container *Container) NetworkMounts() []Mount {
 }
 
 // SecretMountPath returns the path of the secret mount for the container
-func (container *Container) SecretMountPath() string {
-	return filepath.Join(container.Root, "secrets")
+func (container *Container) SecretMountPath() (string, error) {
+	return container.MountsResourcePath("secrets")
 }
 
 // CopyImagePathContent copies files in destination to the volume.
@@ -204,7 +205,7 @@ func (container *Container) CopyImagePathContent(v volume.Volume, destination st
 
 // ShmResourcePath returns path to shm
 func (container *Container) ShmResourcePath() (string, error) {
-	return container.GetRootResourcePath("shm")
+	return container.MountsResourcePath("shm")
 }
 
 // HasMountFor checks if path is a mountpoint
@@ -257,29 +258,36 @@ func (container *Container) IpcMounts() []Mount {
 }
 
 // SecretMount returns the mount for the secret path
-func (container *Container) SecretMount() *Mount {
+func (container *Container) SecretMount() (*Mount, error) {
 	if len(container.SecretReferences) > 0 {
+		src, err := container.SecretMountPath()
+		if err != nil {
+			return nil, err
+		}
 		return &Mount{
-			Source:      container.SecretMountPath(),
+			Source:      src,
 			Destination: containerSecretMountPath,
 			Writable:    false,
-			Propagation: "rprivate",
-		}
+		}, nil
 	}
 
-	return nil
+	return nil, nil
 }
 
 // UnmountSecrets unmounts the local tmpfs for secrets
 func (container *Container) UnmountSecrets() error {
-	if _, err := os.Stat(container.SecretMountPath()); err != nil {
+	p, err := container.SecretMountPath()
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(p); err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
 		return err
 	}
 
-	return detachMounted(container.SecretMountPath())
+	return mount.RecursiveUnmount(p)
 }
 
 // UpdateContainer updates configuration of a container.
@@ -456,7 +464,7 @@ func (container *Container) EnableServiceDiscoveryOnDefaultNetwork() bool {
 
 // SecretMountRHEL returns the Secret Mount point
 func (container *Container) SecretMountRHEL(rootUID, rootGID int) (*Mount, error) {
-	secretsPath, err := container.GetRootResourcePath("secrets")
+	secretsPath, err := container.MountsResourcePath("secrets")
 	if err != nil {
 		return nil, fmt.Errorf("GetSecretsPath failed: %v", err)
 	}

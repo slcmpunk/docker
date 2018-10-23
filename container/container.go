@@ -303,6 +303,11 @@ func (container *Container) ConfigPath() (string, error) {
 	return container.GetRootResourcePath(configFileName)
 }
 
+// MountsResourcePath returns the path where mounts are stored for the given mount
+func (container *Container) MountsResourcePath(mount string) (string, error) {
+	return container.GetRootResourcePath(filepath.Join("mounts", mount))
+}
+
 // CheckpointDir returns the directory checkpoints are stored in
 func (container *Container) CheckpointDir() string {
 	return filepath.Join(container.Root, "checkpoints")
