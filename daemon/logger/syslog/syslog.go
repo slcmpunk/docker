@@ -134,8 +134,11 @@ func New(ctx logger.Context) (logger.Logger, error) {
 }
 
 func (s *syslogger) Log(msg *logger.Message) error {
-	if msg.Source == "stderr" {
-		return s.writer.Err(string(msg.Line))
+	line := string(msg.Line)
+	source := msg.Source
+	logger.PutMessage(msg)
+	if source == "stderr" {
+		return s.writer.Err(line)
 	}
 	return s.writer.Info(string(msg.Line))
 }
