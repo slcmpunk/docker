@@ -32,7 +32,7 @@ func InitLabels(options []string) (plabel string, mlabel string, Err error) {
 	if processLabel != "" {
 		defer func() {
 			if Err != nil {
-				ReleaseLabel(mountLabel)
+				UnreserveLabel(mountLabel)
 			}
 		}()
 		pcon := selinux.NewContext(processLabel)
