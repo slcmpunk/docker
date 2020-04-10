@@ -44,7 +44,6 @@ create network namespaces and allocate interfaces for containers to use.
 package libnetwork
 
 import (
-	"container/heap"
 	"fmt"
 	"net"
 	"strings"
@@ -935,7 +934,7 @@ func (c *controller) NewSandbox(containerID string, options ...SandboxOption) (s
 		sb = &sandbox{
 			id:                 stringid.GenerateRandomID(),
 			containerID:        containerID,
-			endpoints:          epHeap{},
+			endpoints:          []*endpoint{},
 			epPriority:         map[string]int{},
 			populatedEndpoints: map[string]struct{}{},
 			config:             containerConfig{},
@@ -944,8 +943,6 @@ func (c *controller) NewSandbox(containerID string, options ...SandboxOption) (s
 		}
 	}
 	sBox = sb
-
-	heap.Init(&sb.endpoints)
 
 	sb.processOptions(options...)
 
