@@ -65,6 +65,7 @@ func main() {
 	}
 
 	if !stop {
+		logrus.Info("Dockerd has begun")
 		err = daemonCli.start()
 		notifyShutdown(err)
 		if err != nil {
